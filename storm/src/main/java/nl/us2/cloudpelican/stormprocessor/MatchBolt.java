@@ -105,9 +105,9 @@ public class MatchBolt extends BaseRichBolt {
         // Load
         try {
             HashMap<String, Filter> tmp = new HashMap<String, Filter>();
-            CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(settings.get("supervisor_username"), settings.get("supervisor_password")));
-            HttpClient client = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
+            //CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            //credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(settings.get("supervisor_username"), settings.get("supervisor_password")));
+            HttpClient client = HttpClientBuilder.create()/*.setDefaultCredentialsProvider(credentialsProvider)*/.build();
 
             String url = settings.get("supervisor_host") + "filter";
             LOG.info(url);
@@ -115,7 +115,7 @@ public class MatchBolt extends BaseRichBolt {
 
             HttpResponse resp = client.execute(get);
             String body = EntityUtils.toString(resp.getEntity());
-            LOG.debug(body);
+            LOG.info(body);
             JsonObject outer = jsonParser.parse(body).getAsJsonObject();
             JsonArray arr = outer.get("filters").getAsJsonArray();
             for (JsonElement elm : arr) {

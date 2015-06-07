@@ -188,13 +188,15 @@ func DeleteFilter(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 
 func basicAuth(w http.ResponseWriter, r *http.Request) bool {
 	if r.Header["Authorization"] == nil || len(r.Header["Authorization"]) < 1 {
-		http.Error(w, "bad syntax", http.StatusBadRequest)
+		log.Printf("%s", r.Header)
+		http.Error(w, "bad syntax a", http.StatusBadRequest)
 		return false
 	}
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 
 	if len(auth) != 2 || auth[0] != "Basic" {
-		http.Error(w, "bad syntax", http.StatusBadRequest)
+		log.Printf("%s", r.Header)
+		http.Error(w, "bad syntax b", http.StatusBadRequest)
 		return false
 	}
 
