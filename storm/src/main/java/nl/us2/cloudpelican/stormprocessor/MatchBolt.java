@@ -108,7 +108,9 @@ public class MatchBolt extends BaseRichBolt {
             credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(Main.SUPERVISOR_AUTH_USR, Main.SUPERVISOR_AUTH_PWD));
             HttpClient client = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
             HttpGet get = new HttpGet();
-            get.setURI(new URI(Main.SUPERVISOR_HOST + "/filter"));
+            String url = Main.SUPERVISOR_HOST + "/filter";
+            LOG.debug(url);
+            get.setURI(new URI(url));
 
             HttpResponse resp = client.execute(get);
             String body = EntityUtils.toString(resp.getEntity());

@@ -47,10 +47,13 @@ public class Main {
                 } else if (split[0].equals("-topic")) {
                     settings.put("kafka_topic", split[1]);
                 } else if (split[0].equals("-supervisor-host")) {
+                    settings.put("supervisor_host", split[1]);
                     SUPERVISOR_HOST = split[1];
                 } else if (split[0].equals("-supervisor-username")) {
+                    settings.put("supervisor_username", split[1]);
                     SUPERVISOR_AUTH_USR = split[1];
                 } else if (split[0].equals("-supervisor-password")) {
+                    settings.put("supervisor_password", split[1]);
                     SUPERVISOR_AUTH_PWD = split[1];
                 }
             }
