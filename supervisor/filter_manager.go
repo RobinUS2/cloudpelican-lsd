@@ -4,6 +4,7 @@
 package main
 
 import (
+	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
@@ -12,13 +13,15 @@ import (
 )
 
 type FilterManager struct {
-	db       *bolt.DB
-	dbBucket string
+	db          *bolt.DB
+	filterTable string
 }
 
 type Filter struct {
-	Regex string `json:"regex"`
-	Id    string `json:"id"`
+	Regex      string `json:"regex"`
+	Name       string `json:"name"`
+	ClientHost string `json:"client_host"`
+	Id         string `json:"id"`
 }
 
 func (f *Filter) ToJson() (string, error) {
@@ -31,7 +34,7 @@ func (f *Filter) ToJson() (string, error) {
 
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		dbBucket: "filter_manager",
+		filterTable: "filters",
 	}
 	fm.Open()
 	return fm
@@ -47,7 +50,7 @@ func (fm *FilterManager) Open() {
 
 	// Create bucket
 	fm.db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(fm.dbBucket))
+		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterTable))
 		if err != nil {
 			log.Fatal(fmt.Errorf("create bucket: %s", err))
 		}
@@ -55,10 +58,34 @@ func (fm *FilterManager) Open() {
 	})
 }
 
-func (fm *FilterManager) CreateFilter(regex string) (string, error) {
-	var id string = "1234"
+func (fm *FilterManager) GetFilters() []*Filter {
+	var wg sync.WaitGroup
+	var list []*Filter = make([]*Filter, 0)
+	wg.Add(1)
+	fm.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterTable))
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			//fmt.Printf("key=%s, value=%s\n", k, v)
+			elm := filterFromJson(v)
+			if elm != nil {
+				list = append(list, elm)
+			}
+		}
+		wg.Done()
+		return nil
+	})
+	wg.Wait()
+	return list
+}
+
+func (fm *FilterManager) CreateFilter(name string, clientHost string, regex string) (string, error) {
+	var id string = uuid.New()
 	var filter *Filter = newFilter()
 	filter.Regex = regex
+	filter.Name = name
+	filter.ClientHost = clientHost
 	filter.Id = id
 
 	// To JSON
@@ -72,7 +99,7 @@ func (fm *FilterManager) CreateFilter(regex string) (string, error) {
 	wg.Add(1)
 	var err error = nil
 	fm.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(fm.dbBucket))
+		b := tx.Bucket([]byte(fm.filterTable))
 		err = b.Put([]byte(id), []byte(json))
 		if err == nil {
 			log.Printf("Created filter %s", id)
@@ -82,6 +109,15 @@ func (fm *FilterManager) CreateFilter(regex string) (string, error) {
 	})
 	wg.Wait()
 	return id, err
+}
+
+func filterFromJson(b []byte) *Filter {
+	f := newFilter()
+	if err := json.Unmarshal(b, &f); err != nil {
+		log.Printf("Failed json umarshal %s", err)
+		return nil
+	}
+	return f
 }
 
 func newFilter() *Filter {

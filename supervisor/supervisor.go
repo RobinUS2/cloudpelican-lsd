@@ -69,15 +69,21 @@ func PostFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	jresp := jresp.NewJsonResp()
 
 	// Validate
-	regex := r.URL.Query().Get("regex")
+	regex := strings.TrimSpace(r.URL.Query().Get("regex"))
 	if len(regex) < 1 {
 		jresp.Error("Please provide a regex")
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	if len(name) < 1 {
+		jresp.Error("Please provide a name")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
 
 	// Create filter
-	id, err := filterManager.CreateFilter(regex)
+	id, err := filterManager.CreateFilter(name, r.RemoteAddr, regex)
 	if err != nil {
 		jresp.Error(fmt.Sprintf("Failed to create filter: %s", err))
 		fmt.Fprint(w, jresp.ToString(false))
@@ -113,7 +119,9 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
-	// @todo
+	filters := filterManager.GetFilters()
+	jresp.Set("filters", filters)
+	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
