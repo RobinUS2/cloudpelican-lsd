@@ -45,7 +45,7 @@ func main() {
 	router.GET("/filter/:id/result", GetFilterResult)
 	router.PUT("/filter/:id/result", PutFilterResult)
 	router.GET("/filter", GetFilter)
-	router.DELETE("/filter", DeleteFilter)
+	router.DELETE("/filter/:id", DeleteFilter)
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
@@ -125,12 +125,20 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
-func DeleteFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func DeleteFilter(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
-	// @todo
+	id := strings.TrimSpace(ps.ByName("id"))
+	if len(id) < 1 {
+		jresp.Error("Please provide an ID")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	res := filterManager.DeleteFilter(id)
+	jresp.Set("deleted", res)
+	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
 

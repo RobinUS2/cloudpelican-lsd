@@ -80,6 +80,24 @@ func (fm *FilterManager) GetFilters() []*Filter {
 	return list
 }
 
+func (fm *FilterManager) DeleteFilter(id string) bool {
+	var val bool = false
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var err error = nil
+	fm.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterTable))
+		err = b.Delete([]byte(id))
+		if err == nil {
+			val = true
+		}
+		wg.Done()
+		return err
+	})
+	wg.Wait()
+	return val
+}
+
 func (fm *FilterManager) CreateFilter(name string, clientHost string, regex string) (string, error) {
 	var id string = uuid.New()
 	var filter *Filter = newFilter()
