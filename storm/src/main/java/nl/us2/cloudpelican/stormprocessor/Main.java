@@ -41,20 +41,17 @@ public class Main {
             String[] split = arg.split("=", 2);
             if (split.length == 2) {
                 if (split[0].equals("-zookeeper")) {
-                    Main.ZOOKEEPER_NODES = split[1];
+                    settings.put("zookeeper_nodes", split[1]);
                 } else if (split[0].equals("-grep")) {
                     settings.put("match_regex", split[1]);
                 } else if (split[0].equals("-topic")) {
                     settings.put("kafka_topic", split[1]);
                 } else if (split[0].equals("-supervisor-host")) {
                     settings.put("supervisor_host", split[1]);
-                    SUPERVISOR_HOST = split[1];
                 } else if (split[0].equals("-supervisor-username")) {
                     settings.put("supervisor_username", split[1]);
-                    SUPERVISOR_AUTH_USR = split[1];
                 } else if (split[0].equals("-supervisor-password")) {
                     settings.put("supervisor_password", split[1]);
-                    SUPERVISOR_AUTH_PWD = split[1];
                 }
             }
         }
@@ -69,7 +66,7 @@ public class Main {
 
         // Read from kafka
 
-        BrokerHosts hosts = new ZkHosts(ZOOKEEPER_NODES);
+        BrokerHosts hosts = new ZkHosts(settings.get("zookeeper_nodes"));
         SpoutConfig spoutConfig = new SpoutConfig(hosts, settings.get("kafka_topic"), "/" + settings.get("kafka_topic"), UUID.randomUUID().toString());
         spoutConfig.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
@@ -77,7 +74,7 @@ public class Main {
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings.get("match_regex")), globalConcurrency * 4).localOrShuffleGrouping(KAFKA_SPOUT);
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 4).localOrShuffleGrouping(KAFKA_SPOUT);
 
         // Debug on for testing
         Config conf = new Config();

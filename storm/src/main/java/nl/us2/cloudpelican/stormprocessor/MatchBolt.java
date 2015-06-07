@@ -48,13 +48,15 @@ public class MatchBolt extends BaseRichBolt {
     JsonParser jsonParser;
     private boolean localMode = false;
     private String regex;
+    private HashMap<String, String> settings;
 
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
-    public MatchBolt(String regex) {
+    public MatchBolt(HashMap<String, String> settings) {
         super();
         filters = null;
-        this.regex = regex;
+        this.settings = settings;
+        this.regex = this.settings.get("match_regex");
 
 
     }
@@ -105,11 +107,11 @@ public class MatchBolt extends BaseRichBolt {
         try {
             HashMap<String, Filter> tmp = new HashMap<String, Filter>();
             CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(Main.SUPERVISOR_AUTH_USR, Main.SUPERVISOR_AUTH_PWD));
+            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(settings.get("supervisor_username"), settings.get("supervisor_password")));
             HttpClient client = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
 
-            String url = Main.SUPERVISOR_HOST + "/filter";
-            LOG.debug(url);
+            String url = settings.get("supervisor_host") + "/filter";
+            LOG.info(url);
             HttpGet get = new HttpGet(url);
 
             HttpResponse resp = client.execute(get);
