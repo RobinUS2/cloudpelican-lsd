@@ -44,16 +44,23 @@ import java.util.regex.Pattern;
 public class MatchBolt extends BaseRichBolt {
 
     OutputCollector _collector;
-    Pattern pattern;
     HashMap<String, Filter> filters;
     JsonParser jsonParser;
     private boolean localMode = false;
+    private String regex;
 
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
     public MatchBolt(String regex) {
         super();
         filters = null;
+        this.regex = regex;
+
+
+    }
+
+    public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
+        _collector = collector;
         jsonParser = new JsonParser();
 
         // Local mode
@@ -68,10 +75,6 @@ public class MatchBolt extends BaseRichBolt {
             filters.put(fakeId, new Filter(obj));
             LOG.info("Setup up local regex " + regex);
         }
-    }
-
-    public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-        _collector = collector;
     }
 
     public void execute(Tuple tuple) {
