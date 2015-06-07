@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -96,12 +97,25 @@ func PostFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
-func GetFilterResult(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
-	// @todo
+	id := strings.TrimSpace(ps.ByName("id"))
+	if len(id) < 1 {
+		jresp.Error("Please provide an ID")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	filter := filterManager.GetFilter(id)
+	if filter == nil {
+		jresp.Error(fmt.Sprintf("Filter %s not found", id))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	jresp.Set("results", filter.Results)
+	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
@@ -122,8 +136,19 @@ func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
-	res := filter.AddResults(make([]string, 0))
+
+	// Read body
+	scanner := bufio.NewScanner(r.Body)
+	scanner.Split(bufio.ScanLines)
+	var lines []string = make([]string, 0)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	// Add results
+	res := filter.AddResults(lines)
 	jresp.Set("ack", res)
+	jresp.Set("lines", len(lines))
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }

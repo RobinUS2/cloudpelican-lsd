@@ -19,10 +19,12 @@ type FilterManager struct {
 }
 
 type Filter struct {
-	Regex      string `json:"regex"`
-	Name       string `json:"name"`
-	ClientHost string `json:"client_host"`
-	Id         string `json:"id"`
+	Regex      string   `json:"regex"`
+	Name       string   `json:"name"`
+	ClientHost string   `json:"client_host"`
+	Id         string   `json:"id"`
+	Results    []string `json:"results"`
+	resultsMux sync.RWMutex
 }
 
 func (f *Filter) ToJson() (string, error) {
@@ -33,8 +35,41 @@ func (f *Filter) ToJson() (string, error) {
 	return string(bytes), nil
 }
 
+func (f *Filter) Save() bool {
+	var res bool = false
+	json, jsonEr := f.ToJson()
+	if jsonEr != nil {
+		log.Printf("Json error %s", jsonEr)
+		return false
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var err error = nil
+	filterManager.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(filterManager.filterTable))
+		err = b.Put([]byte(f.Id), []byte(json))
+		if err == nil {
+			log.Printf("Saved filter %s", f.Id)
+			res = true
+		}
+		wg.Done()
+		return err
+	})
+	wg.Wait()
+	return res
+}
+
 func (f *Filter) AddResults(res []string) bool {
-	return false
+	f.resultsMux.Lock()
+	if f.Results == nil {
+		f.Results = make([]string, 0)
+	}
+	for _, line := range res {
+		f.Results = append(f.Results, line)
+	}
+	f.resultsMux.Unlock()
+	f.Save()
+	return true
 }
 
 func NewFilterManager() *FilterManager {
