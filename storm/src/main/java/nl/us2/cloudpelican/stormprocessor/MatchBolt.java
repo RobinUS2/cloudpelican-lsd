@@ -15,6 +15,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.auth.AuthScope;
 import org.apache.storm.http.auth.Credentials;
@@ -25,6 +27,7 @@ import org.apache.storm.http.client.methods.HttpGet;
 import org.apache.storm.http.impl.client.BasicCredentialsProvider;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.apache.storm.http.util.EntityUtils;
+import org.apache.storm.netty.handler.codec.base64.Base64Encoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
@@ -112,6 +115,9 @@ public class MatchBolt extends BaseRichBolt {
             String url = settings.get("supervisor_host") + "filter";
             LOG.info(url);
             HttpGet get = new HttpGet(url);
+            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
+            LOG.info(token);
+            get.setHeader("Authorization", "Basic " + token);
 
             HttpResponse resp = client.execute(get);
             String body = EntityUtils.toString(resp.getEntity());
