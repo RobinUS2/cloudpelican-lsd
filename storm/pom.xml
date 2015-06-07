@@ -13,8 +13,8 @@
             <groupId>org.apache.storm</groupId>
             <artifactId>storm-core</artifactId>
             <version>0.9.3</version>
-            <!--<scope>compile</scope>-->
-            <scope>provided</scope>
+            <!--<scope>compile</scope>--><!-- Use this for local mode -->
+            <scope>provided</scope><!-- Use this for distributed mode -->
         </dependency>
         <dependency>
             <groupId>org.apache.storm</groupId>
