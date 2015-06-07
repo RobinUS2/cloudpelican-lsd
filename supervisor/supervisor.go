@@ -6,18 +6,24 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"github.com/RobinUS2/golang-jresp"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
+	"strings"
 )
 
 var serverPort int
+var basicAuthUsr string
+var basicAuthPwd string
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
+	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
+	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
 	flag.Parse()
 }
 
@@ -43,7 +49,11 @@ func GetHome(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
-func basicAuth(w http.ResponseWriter, r *http.Request) {
+func basicAuth(w http.ResponseWriter, r *http.Request) bool {
+	if r.Header["Authorization"] == nil || len(r.Header["Authorization"]) < 1 {
+		http.Error(w, "bad syntax", http.StatusBadRequest)
+		return false
+	}
 	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
 
 	if len(auth) != 2 || auth[0] != "Basic" {
@@ -54,9 +64,16 @@ func basicAuth(w http.ResponseWriter, r *http.Request) {
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
 
-	if len(pair) != 2 || !Validate(pair[0], pair[1]) {
+	if len(pair) != 2 || !validateAuth(pair[0], pair[1]) {
 		http.Error(w, "authorization failed", http.StatusUnauthorized)
 		return false
 	}
 	return true
+}
+
+func validateAuth(username, password string) bool {
+	if username == basicAuthUsr && password == basicAuthPwd {
+		return true
+	}
+	return false
 }
