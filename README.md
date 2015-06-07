@@ -1,7 +1,7 @@
 # cloudpelican-lsd
 Log stream dump tool (uses Rsyslog, Kafka and Apache storm)
 
-### Getting Started ###
+### Getting Started in local mode ###
 ```
 git clone git@github.com:RobinUS2/cloudpelican-lsd.git
 cd cloudpelican-lsd/storm
