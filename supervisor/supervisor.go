@@ -66,9 +66,27 @@ func PostFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
-	filterManager.CreateFilter()
 	jresp := jresp.NewJsonResp()
-	// @todo
+
+	// Validate
+	regex := r.URL.Query().Get("regex")
+	if len(regex) < 1 {
+		jresp.Error("Please provide a regex")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+
+	// Create filter
+	id, err := filterManager.CreateFilter(regex)
+	if err != nil {
+		jresp.Error(fmt.Sprintf("Failed to create filter: %s", err))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+
+	// OK :)
+	jresp.Set("filter_id", id)
+	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
