@@ -1,5 +1,7 @@
 package nl.us2.cloudpelican.stormprocessor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import storm.kafka.*;
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
@@ -21,6 +23,7 @@ public class Main {
     public static String KAFKA_SPOUT = "kafka_spout";
     public static String MATCH_BOLT = "match_bolt";
     private static boolean isRunning = true;
+    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
     public static void main(String [] args) throws Exception
     {
@@ -43,7 +46,7 @@ public class Main {
                 }
             }
         }
-        System.out.println(settings);
+        LOG.info(settings.toString());
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
@@ -72,11 +75,8 @@ public class Main {
             conf.setNumWorkers(globalConcurrency);
             conf.setNumAckers(globalConcurrency);
             conf.setMaxSpoutPending(1000);
-            System.out.println(topologyName);
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
-            //System.err.println("Disabled local mode");
-            //System.exit(-1);
             LocalCluster cluster = new LocalCluster();
             cluster.submitTopology(topologyName, conf, builder.createTopology());
 
@@ -84,6 +84,7 @@ public class Main {
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 @Override
                 public void run( ){
+                    LOG.info("Shutting down");
                     isRunning = false;
                 }
             });
