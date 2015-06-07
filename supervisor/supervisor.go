@@ -35,6 +35,7 @@ func main() {
 
 func GetHome(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	jresp := jresp.NewJsonResp()
+	jresp.Set("hello", "This is the CloudPelican supervisor")
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
