@@ -34,8 +34,29 @@ func main() {
 }
 
 func GetHome(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
 	jresp := jresp.NewJsonResp()
 	jresp.Set("hello", "This is the CloudPelican supervisor")
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func basicAuth(w http.ResponseWriter, r *http.Request) {
+	auth := strings.SplitN(r.Header["Authorization"][0], " ", 2)
+
+	if len(auth) != 2 || auth[0] != "Basic" {
+		http.Error(w, "bad syntax", http.StatusBadRequest)
+		return false
+	}
+
+	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	pair := strings.SplitN(string(payload), ":", 2)
+
+	if len(pair) != 2 || !Validate(pair[0], pair[1]) {
+		http.Error(w, "authorization failed", http.StatusUnauthorized)
+		return false
+	}
+	return true
 }
