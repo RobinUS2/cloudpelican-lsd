@@ -35,7 +35,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  *
@@ -110,7 +109,7 @@ public class MatchBolt extends BaseRichBolt {
             credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(settings.get("supervisor_username"), settings.get("supervisor_password")));
             HttpClient client = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
 
-            String url = settings.get("supervisor_host") + "/filter";
+            String url = settings.get("supervisor_host") + "filter";
             LOG.info(url);
             HttpGet get = new HttpGet(url);
 
