@@ -22,6 +22,9 @@ public class Main {
     public static String ZOOKEEPER_NODES = "";
     public static String KAFKA_SPOUT = "kafka_spout";
     public static String MATCH_BOLT = "match_bolt";
+    public static String SUPERVISOR_HOST = "";
+    public static String SUPERVISOR_AUTH_USR = "";
+    public static String SUPERVISOR_AUTH_PWD = "";
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
@@ -43,6 +46,12 @@ public class Main {
                     settings.put("match_regex", split[1]);
                 } else if (split[0].equals("-topic")) {
                     settings.put("kafka_topic", split[1]);
+                } else if (split[0].equals("-supervisor-host")) {
+                    SUPERVISOR_HOST = split[1];
+                } else if (split[0].equals("-supervisor-username")) {
+                    SUPERVISOR_AUTH_USR = split[1];
+                } else if (split[0].equals("-supervisor-password")) {
+                    SUPERVISOR_AUTH_PWD = split[1];
                 }
             }
         }
