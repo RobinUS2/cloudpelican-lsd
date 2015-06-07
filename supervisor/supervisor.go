@@ -159,7 +159,7 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	jresp := jresp.NewJsonResp()
 	filters := filterManager.GetFilters()
-	var filtersNoRes []*Filter = make([]*Filter, len(filters))
+	var filtersNoRes []*Filter = make([]*Filter, 0)
 	for _, filter := range filters {
 		filter.Results = nil
 		filtersNoRes = append(filtersNoRes, filter)
