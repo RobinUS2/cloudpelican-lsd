@@ -105,12 +105,26 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
-func PutFilterResult(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
-	// @todo
+	id := strings.TrimSpace(ps.ByName("id"))
+	if len(id) < 1 {
+		jresp.Error("Please provide an ID")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	filter := filterManager.GetFilter(id)
+	if filter == nil {
+		jresp.Error(fmt.Sprintf("Filter %s not found", id))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	res := filter.AddResults(make([]string, 0))
+	jresp.Set("ack", res)
+	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
 

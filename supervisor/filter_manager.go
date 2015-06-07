@@ -13,8 +13,9 @@ import (
 )
 
 type FilterManager struct {
-	db          *bolt.DB
-	filterTable string
+	db                *bolt.DB
+	filterTable       string
+	filterResultTable string
 }
 
 type Filter struct {
@@ -32,9 +33,14 @@ func (f *Filter) ToJson() (string, error) {
 	return string(bytes), nil
 }
 
+func (f *Filter) AddResults(res []string) bool {
+	return false
+}
+
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable: "filters",
+		filterTable:       "filters",
+		filterResultTable: "filter_results",
 	}
 	fm.Open()
 	return fm
@@ -48,14 +54,29 @@ func (fm *FilterManager) Open() {
 	}
 	fm.db = db
 
-	// Create bucket
+	// Create buckets
+	var wg sync.WaitGroup
+	wg.Add(1)
 	fm.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterTable))
 		if err != nil {
 			log.Fatal(fmt.Errorf("create bucket: %s", err))
 		}
+		wg.Done()
 		return nil
 	})
+	wg.Add(1)
+	fm.db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterResultTable))
+		if err != nil {
+			log.Fatal(fmt.Errorf("create bucket: %s", err))
+		}
+		wg.Done()
+		return nil
+	})
+
+	// Wait until buckets are ready
+	wg.Wait()
 }
 
 func (fm *FilterManager) GetFilters() []*Filter {
@@ -78,6 +99,21 @@ func (fm *FilterManager) GetFilters() []*Filter {
 	})
 	wg.Wait()
 	return list
+}
+
+func (fm *FilterManager) GetFilter(id string) *Filter {
+	var wg sync.WaitGroup
+	var elm *Filter = nil
+	wg.Add(1)
+	fm.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterTable))
+		res := b.Get([]byte(id))
+		elm = filterFromJson(res)
+		wg.Done()
+		return nil
+	})
+	wg.Wait()
+	return elm
 }
 
 func (fm *FilterManager) DeleteFilter(id string) bool {
