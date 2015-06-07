@@ -19,15 +19,21 @@ import (
 var serverPort int
 var basicAuthUsr string
 var basicAuthPwd string
+var dbFile string
+var filterManager *FilterManager
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
 	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
 	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
+	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
 	flag.Parse()
 }
 
 func main() {
+	// Filter manager
+	filterManager = NewFilterManager()
+
 	// Routing
 	router := httprouter.New()
 
@@ -60,6 +66,7 @@ func PostFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
+	filterManager.CreateFilter()
 	jresp := jresp.NewJsonResp()
 	// @todo
 	fmt.Fprint(w, jresp.ToString(false))

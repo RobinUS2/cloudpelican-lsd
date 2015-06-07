@@ -1,3 +1,4 @@
 supervisor
 pkg/**
 src/**
+*.db
