@@ -34,6 +34,13 @@ func main() {
 	// Docs
 	router.GET("/", GetHome)
 
+	// Filters
+	router.POST("/filter", PostFilter)
+	router.GET("/filter/:id/result", GetFilterResult)
+	router.PUT("/filter/:id/result", PutFilterResult)
+	router.GET("/filter", GetFilter)
+	router.DELETE("/filter", DeleteFilter)
+
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
@@ -46,6 +53,51 @@ func GetHome(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	jresp := jresp.NewJsonResp()
 	jresp.Set("hello", "This is the CloudPelican supervisor")
 	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func PostFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	// @todo
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func GetFilterResult(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	// @todo
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func PutFilterResult(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	// @todo
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	// @todo
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func DeleteFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	// @todo
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
