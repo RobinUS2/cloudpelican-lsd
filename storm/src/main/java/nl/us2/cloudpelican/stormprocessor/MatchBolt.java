@@ -16,8 +16,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.storm.http.HttpResponse;
+import org.apache.storm.http.auth.AuthScope;
+import org.apache.storm.http.auth.Credentials;
+import org.apache.storm.http.auth.UsernamePasswordCredentials;
+import org.apache.storm.http.client.CredentialsProvider;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpGet;
+import org.apache.storm.http.impl.client.BasicCredentialsProvider;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.apache.storm.http.util.EntityUtils;
 import org.slf4j.Logger;
@@ -96,9 +101,12 @@ public class MatchBolt extends BaseRichBolt {
         // Load
         try {
             HashMap<String, Filter> tmp = new HashMap<String, Filter>();
-            HttpClient client = HttpClientBuilder.create().build();
+            CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(Main.SUPERVISOR_AUTH_USR, Main.SUPERVISOR_AUTH_PWD));
+            HttpClient client = HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
             HttpGet get = new HttpGet();
             get.setURI(new URI(Main.SUPERVISOR_HOST + "/filter"));
+
             HttpResponse resp = client.execute(get);
             String body = EntityUtils.toString(resp.getEntity());
             LOG.debug(body);
