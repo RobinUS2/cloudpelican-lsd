@@ -22,7 +22,7 @@ yum -y install rsyslog rsyslog-kafka
 
 # Config rsyslog kafka
 if [ ! -f /etc/rsyslog.d/kafka.conf ]; then
-	echo -e "module(load=\"omkafka\")\naction(type=\"omkafka\" topic=\"$KAFKA_TOPIC\" confParam=[\"compression.codec=snappy\"] broker=\"$KAFKA_BROKERS\")" > /etc/rsyslog.d/kafka.conf
+	echo -e "module(load=\"omkafka\")\naction(type=\"omkafka\" topic=\"$KAFKA_TOPIC\" confParam=[\"compression.codec=snappy\"]  partitions.auto=\"on\" broker=\"$KAFKA_BROKERS\")" > /etc/rsyslog.d/kafka.conf
 fi
 
 # Validate config
