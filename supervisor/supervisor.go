@@ -45,6 +45,9 @@ func main() {
 	// Docs
 	router.GET("/", GetHome)
 
+	// Ping
+	router.GET("/ping", GetPing)
+
 	// Filters
 	router.POST("/filter", PostFilter)                // Create new filter
 	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
@@ -55,6 +58,16 @@ func main() {
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+}
+
+func GetPing(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	jresp.Set("pong", true)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
 }
 
 func GetHome(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
