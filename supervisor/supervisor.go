@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
 	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
-	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
+	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10, "Maximum amount of messages kept in memory")
 	flag.Parse()
 }
 
