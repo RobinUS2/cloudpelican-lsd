@@ -114,17 +114,21 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
+	var clearResults bool = false
 	filter.resultsMux.RLock()
+	clearResults = len(filter.Results) > 0
 	jresp.Set("results", filter.Results)
 	filter.resultsMux.RUnlock()
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 
 	// Clear results
-	filter.resultsMux.Lock()
-	filter.Results = make([]string, 0)
-	filter.resultsMux.Unlock()
-	filter.Save()
+	if clearResults {
+		filter.resultsMux.Lock()
+		filter.Results = make([]string, 0)
+		filter.resultsMux.Unlock()
+		filter.Save()
+	}
 }
 
 func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
