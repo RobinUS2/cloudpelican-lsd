@@ -82,23 +82,18 @@ func (f *Filter) AddResults(res []string) bool {
 		log.Printf("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
 		tmp := make([]string, 0)
 		tooMany := newPlusCurrent - maxMsgMemory
-		log.Printf("new %d", newCount)
-		log.Printf("len %d", len(filterManager.filterResults[f.Id]))
-		log.Printf("tm %d", tooMany)
-		log.Printf("c %d", currentCount)
 		for i := tooMany; i < currentCount-1; i++ {
 			log.Printf("%d", i)
 			tmp = append(tmp, filterManager.filterResults[f.Id][i])
 		}
-		log.Printf("len after %d", len(tmp))
 		filterManager.filterResults[f.Id] = tmp
 	}
 
 	// Add lines
+	// @todo It is possible that there is a big resultset immediately overflow maxMsgMemory
 	for _, line := range res {
 		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], line)
 	}
-	log.Printf("len final %d", len(filterManager.filterResults[f.Id]))
 	f.resultsMux.Unlock()
 	return true
 }
