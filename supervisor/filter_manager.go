@@ -93,9 +93,6 @@ func (f *Filter) AddResults(res []string) bool {
 		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], line)
 	}
 	f.resultsMux.Unlock()
-
-	// Save
-	f.Save()
 	return true
 }
 
