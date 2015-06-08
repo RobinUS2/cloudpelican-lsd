@@ -161,7 +161,7 @@ func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		lines = append(lines, scanner.Text())
 		count++
 		if count >= maxMsgBatch {
-			log.Prinln("ERROR: Aborting message batch, reached limit %d", maxMsgBatch)
+			log.Println("ERROR: Aborting message batch, reached limit %d", maxMsgBatch)
 			break
 		}
 	}
