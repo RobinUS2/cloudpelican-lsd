@@ -24,6 +24,13 @@ func (s *SupervisorCon) Connect() {
 	}
 }
 
+func (s *SupervisorCon) Ping() {
+	_, err := s._get("ping")
+	if err == nil {
+		fmt.Printf("Pong\n")
+	}
+}
+
 func (s *SupervisorCon) _get(uri string) (string, error) {
 	// Client
 	client := s._getHttpClient()

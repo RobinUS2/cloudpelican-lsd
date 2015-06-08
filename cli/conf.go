@@ -78,6 +78,7 @@ func loadConf() (bool, error) {
 	if conf.PersistentSession != nil {
 		session = conf.PersistentSession
 		fmt.Printf("Restored session to %s\n", session["supervisor_uri"])
+		_connect()
 	}
 
 	return true, nil

@@ -52,6 +52,7 @@ func startConsole() {
 	CONSOLE_KEYWORDS["exit"] = true
 	CONSOLE_KEYWORDS["clear"] = true
 	CONSOLE_KEYWORDS["save"] = true
+	CONSOLE_KEYWORDS["ping"] = true
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
 
@@ -96,6 +97,8 @@ func handleConsole(input string) {
 		c.Run()
 	} else if inputLower == "save" {
 		save()
+	} else if inputLower == "ping" {
+		ping()
 	} else if strings.Index(inputLower, "connect ") == 0 {
 		split := strings.SplitN(input, "connect ", 2)
 		if len(split) != 2 {
@@ -114,6 +117,21 @@ func handleConsole(input string) {
 		printConsoleError(input)
 	}
 
+}
+
+func ping() {
+	if !ensureConnected() {
+		return
+	}
+	supervisorCon.Ping()
+}
+
+func ensureConnected() bool {
+	if supervisorCon == nil {
+		fmt.Printf("Not connected\n")
+		return false
+	}
+	return true
 }
 
 func save() {
@@ -148,6 +166,7 @@ func printConsoleHelp() {
 	fmt.Printf("auth <usr> <pwd>\t\tSet authentication details\n")
 	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
+	fmt.Printf("ping\t\t\t\tTest connection with supervisor\n")
 	fmt.Printf("help\t\t\t\tPrints this documentation\n")
 	fmt.Printf("quit\t\t\t\tExit the CloudPelican cli\n")
 	fmt.Printf("\n")
