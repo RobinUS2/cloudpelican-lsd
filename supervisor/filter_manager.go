@@ -13,18 +13,25 @@ import (
 )
 
 type FilterManager struct {
-	db                *bolt.DB
-	filterTable       string
-	filterResultTable string
+	db            *bolt.DB
+	filterTable   string
+	filterResults map[string][]string
 }
 
 type Filter struct {
-	Regex      string   `json:"regex"`
-	Name       string   `json:"name"`
-	ClientHost string   `json:"client_host"`
-	Id         string   `json:"id"`
-	Results    []string `json:"results"`
+	Regex      string `json:"regex"`
+	Name       string `json:"name"`
+	ClientHost string `json:"client_host"`
+	Id         string `json:"id"`
+	//Results    []string `json:"results"`
 	resultsMux sync.RWMutex
+}
+
+func (f *Filter) Results() []string {
+	if filterManager.filterResults[f.Id] == nil {
+		filterManager.filterResults[f.Id] = make([]string, 0)
+	}
+	return filterManager.filterResults[f.Id]
 }
 
 func (f *Filter) ToJson() (string, error) {
@@ -61,22 +68,41 @@ func (f *Filter) Save() bool {
 
 func (f *Filter) AddResults(res []string) bool {
 	f.resultsMux.Lock()
-	if f.Results == nil {
-		f.Results = make([]string, 0)
+
+	// Init variable
+	if filterManager.filterResults[f.Id] == nil {
+		filterManager.filterResults[f.Id] = make([]string, 0)
 	}
+
+	// Exceed limit?
+	newCount := len(res)
+	currentCount := len(filterManager.filterResults[f.Id])
+	newPlusCurrent := newCount + currentCount
+	if newPlusCurrent > maxMsgMemory {
+		log.Println("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
+		tmp := make([]string, 0)
+		tooMany := maxMsgMemory - newPlusCurrent
+		for i := tooMany; i < currentCount; i++ {
+			tmp = append(tmp, filterManager.filterResults[f.Id][i])
+		}
+		filterManager.filterResults[f.Id] = tmp
+	}
+
+	// Add lines
 	for _, line := range res {
-		log.Println(line)
-		f.Results = append(f.Results, line)
+		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], line)
 	}
 	f.resultsMux.Unlock()
+
+	// Save
 	f.Save()
 	return true
 }
 
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:       "filters",
-		filterResultTable: "filter_results",
+		filterTable:   "filters",
+		filterResults: make(map[string][]string),
 	}
 	fm.Open()
 	return fm
@@ -95,15 +121,6 @@ func (fm *FilterManager) Open() {
 	wg.Add(1)
 	fm.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterTable))
-		if err != nil {
-			log.Fatal(fmt.Errorf("create bucket: %s", err))
-		}
-		wg.Done()
-		return nil
-	})
-	wg.Add(1)
-	fm.db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterResultTable))
 		if err != nil {
 			log.Fatal(fmt.Errorf("create bucket: %s", err))
 		}

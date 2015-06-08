@@ -22,12 +22,14 @@ var basicAuthUsr string
 var basicAuthPwd string
 var dbFile string
 var filterManager *FilterManager
+var maxMsgMemory int
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
 	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
 	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
+	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
 	flag.Parse()
 }
 
@@ -116,8 +118,8 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	}
 	var clearResults bool = false
 	filter.resultsMux.RLock()
-	clearResults = len(filter.Results) > 0
-	jresp.Set("results", filter.Results)
+	clearResults = len(filter.Results()) > 0
+	jresp.Set("results", filter.Results())
 	filter.resultsMux.RUnlock()
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
@@ -125,9 +127,8 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	// Clear results
 	if clearResults {
 		filter.resultsMux.Lock()
-		filter.Results = make([]string, 0)
+		filterManager.filterResults[filter.Id] = make([]string, 0)
 		filter.resultsMux.Unlock()
-		filter.Save()
 	}
 }
 
@@ -171,12 +172,7 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 	jresp := jresp.NewJsonResp()
 	filters := filterManager.GetFilters()
-	var filtersNoRes []*Filter = make([]*Filter, 0)
-	for _, filter := range filters {
-		filter.Results = nil
-		filtersNoRes = append(filtersNoRes, filter)
-	}
-	jresp.Set("filters", filtersNoRes)
+	jresp.Set("filters", filters)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
