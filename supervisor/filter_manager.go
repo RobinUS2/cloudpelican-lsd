@@ -65,6 +65,7 @@ func (f *Filter) AddResults(res []string) bool {
 		f.Results = make([]string, 0)
 	}
 	for _, line := range res {
+		log.Println(line)
 		f.Results = append(f.Results, line)
 	}
 	f.resultsMux.Unlock()
