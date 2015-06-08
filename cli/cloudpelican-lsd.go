@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"strings"
 )
@@ -45,6 +46,7 @@ func startConsole() {
 	// Keyword defs
 	CONSOLE_KEYWORDS["help"] = true
 	CONSOLE_KEYWORDS["quit"] = true
+	CONSOLE_KEYWORDS["clear"] = true
 
 	reader := bufio.NewReader(os.Stdin)
 	var buffer bytes.Buffer
@@ -81,14 +83,20 @@ func handleConsole(input string) {
 		printConsoleHelp()
 	} else if inputLower == "quit" {
 		os.Exit(0)
+	} else if inputLower == "clear" {
+		c := exec.Command("clear")
+		c.Stdout = os.Stdout
+		c.Run()
 	}
 }
 
 func printConsoleHelp() {
 	fmt.Printf("\n")
-	fmt.Printf("CMD\tDESCRIPTION\n")
-	fmt.Printf("quit\tExit the CloudPelican cli\n")
-	fmt.Printf("help\tPrints this documentation\n")
+	fmt.Printf("CMD\t\t\t\tDESCRIPTION\n")
+	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
+	fmt.Printf("clear\t\t\t\tClears console\n")
+	fmt.Printf("help\t\t\t\tPrints this documentation\n")
+	fmt.Printf("quit\t\t\t\tExit the CloudPelican cli\n")
 	fmt.Printf("\n")
 }
 
