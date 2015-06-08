@@ -90,7 +90,7 @@ func (f *Filter) AddResults(res []string) bool {
 			log.Printf("%d", i)
 			tmp = append(tmp, filterManager.filterResults[f.Id][i])
 		}
-		log.Printf("len after %d", len(filterManager.filterResults[f.Id]))
+		log.Printf("len after %d", len(tmp))
 		filterManager.filterResults[f.Id] = tmp
 	}
 
