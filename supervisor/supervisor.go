@@ -114,9 +114,17 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
+	filter.resultsMux.RLock()
 	jresp.Set("results", filter.Results)
+	filter.resultsMux.RUnlock()
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
+
+	// Clear results
+	filter.resultsMux.Lock()
+	filter.Results = make([]string, 0)
+	filter.resultsMux.Unlock()
+	filter.Save()
 }
 
 func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
