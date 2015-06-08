@@ -17,10 +17,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.storm.http.HttpEntity;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpGet;
 import org.apache.storm.http.client.methods.HttpPut;
+import org.apache.storm.http.entity.StringEntity;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.apache.storm.http.util.EntityUtils;
 import org.slf4j.Logger;
@@ -78,6 +80,12 @@ public class ResultSupervisorWriterBolt extends BaseRichBolt {
                 String url = settings.get("supervisor_host") + "filter/" + kv.getKey() + "/result";
                 LOG.info(url);
                 HttpPut put = new HttpPut(url);
+                StringBuilder sb = new StringBuilder();
+                for (String line : kv.getValue()) {
+                    sb.append(line).append("\n");
+                }
+                StringEntity entity = new StringEntity(sb.toString());
+                put.setEntity(entity);
                 String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
                 LOG.debug(token);
                 put.setHeader("Authorization", "Basic " + token);
