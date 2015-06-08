@@ -98,6 +98,7 @@ func (f *Filter) AddResults(res []string) bool {
 	for _, line := range res {
 		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], line)
 	}
+	log.Printf("len final %d", len(filterManager.filterResults[f.Id]))
 	f.resultsMux.Unlock()
 	return true
 }
