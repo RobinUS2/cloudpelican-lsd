@@ -1,5 +1,6 @@
 package nl.us2.cloudpelican.stormprocessor;
 
+import backtype.storm.tuple.Fields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.kafka.*;
@@ -19,12 +20,9 @@ import java.util.UUID;
  * Created by robin on 07/06/15.
  */
 public class Main {
-    public static String ZOOKEEPER_NODES = "";
     public static String KAFKA_SPOUT = "kafka_spout";
     public static String MATCH_BOLT = "match_bolt";
-    public static String SUPERVISOR_HOST = "";
-    public static String SUPERVISOR_AUTH_USR = "";
-    public static String SUPERVISOR_AUTH_PWD = "";
+    public static String SUPERVISOR_WRITER = "supervisor_writer";
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
@@ -75,6 +73,9 @@ public class Main {
 
         // Match bolt
         builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 4).localOrShuffleGrouping(KAFKA_SPOUT);
+
+        // Supervisor writer bolt
+        builder.setBolt(SUPERVISOR_WRITER, new ResultSupervisorWriterBolt(settings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Debug on for testing
         Config conf = new Config();

@@ -3,41 +3,33 @@ package nl.us2.cloudpelican.stormprocessor;
 /**
  * Created by robin on 07/06/15.
  */
+
 import backtype.storm.Config;
-import backtype.storm.messaging.local;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
-//import backtype.storm.tuple.Fields;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.storm.http.HttpResponse;
-import org.apache.storm.http.auth.AuthScope;
-import org.apache.storm.http.auth.Credentials;
-import org.apache.storm.http.auth.UsernamePasswordCredentials;
-import org.apache.storm.http.client.CredentialsProvider;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpGet;
-import org.apache.storm.http.impl.client.BasicCredentialsProvider;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.apache.storm.http.util.EntityUtils;
-import org.apache.storm.netty.handler.codec.base64.Base64Encoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
-//import backtype.storm.tuple.Values;
-//import static backtype.storm.utils.Utils.DEFAULT_STREAM_ID;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
+import static backtype.storm.utils.Utils.DEFAULT_STREAM_ID;
 
 /**
  *
@@ -52,7 +44,7 @@ public class MatchBolt extends BaseRichBolt {
     private String regex;
     private HashMap<String, String> settings;
 
-    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MatchBolt.class);
 
     public MatchBolt(HashMap<String, String> settings) {
         super();
@@ -108,27 +100,25 @@ public class MatchBolt extends BaseRichBolt {
         // Load
         try {
             HashMap<String, Filter> tmp = new HashMap<String, Filter>();
-            //CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            //credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(settings.get("supervisor_username"), settings.get("supervisor_password")));
             HttpClient client = HttpClientBuilder.create()/*.setDefaultCredentialsProvider(credentialsProvider)*/.build();
 
             String url = settings.get("supervisor_host") + "filter";
-            LOG.info(url);
+            LOG.debug(url);
             HttpGet get = new HttpGet(url);
             String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-            LOG.info(token);
+            LOG.debug(token);
             get.setHeader("Authorization", "Basic " + token);
 
             HttpResponse resp = client.execute(get);
             String body = EntityUtils.toString(resp.getEntity());
-            LOG.info(body);
+            LOG.debug(body);
             JsonObject outer = jsonParser.parse(body).getAsJsonObject();
             JsonArray arr = outer.get("filters").getAsJsonArray();
             for (JsonElement elm : arr) {
                 try {
                     JsonObject filter = elm.getAsJsonObject();
                     Filter f = new Filter(filter);
-                    if (!filters.containsKey(f.toString())) {
+                    if (!filters.containsKey(f.Id())) {
                         LOG.info("Loaded filter " + filter.toString());
                     }
                     tmp.put(f.Id(), f);
@@ -163,18 +153,23 @@ public class MatchBolt extends BaseRichBolt {
 
     public void executeTuple(Tuple tuple) {
         String msg = tuple.getString(0).trim();
+        if (msg.isEmpty()) {
+            return;
+        }
+
+        // Match filters
         for (Filter filter : getFilters().values()) {
             Matcher m = filter.Matcher(msg);
             boolean b = m.find();
             if (b) {
-                System.out.println(msg);
+                // Emit match
+                _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg));
             }
         }
-        //_collector.emit(DEFAULT_STREAM_ID, new Values(customerId, uuid, platform, interactionType, interactionValue, interactionUserDefinedSubtype, campaignId, creativeId, pixelId, eventType));
-        _collector.ack(tuple);
+        // No ack, is handled in outer
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        //declarer.declare(new Fields("flxone_customer_id", "uuid", "platform", "interaction_type", "interaction_value", "interaction_user_defined_subtype", "campaign_id", "creative_id", "pixel_id", "event_type"));
+        declarer.declare(new Fields("filter_id", "msg"));
     }
 }

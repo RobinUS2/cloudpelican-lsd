@@ -42,11 +42,11 @@ func main() {
 	router.GET("/", GetHome)
 
 	// Filters
-	router.POST("/filter", PostFilter)
-	router.GET("/filter/:id/result", GetFilterResult)
-	router.PUT("/filter/:id/result", PutFilterResult)
-	router.GET("/filter", GetFilter)
-	router.DELETE("/filter/:id", DeleteFilter)
+	router.POST("/filter", PostFilter)                // Create new filter
+	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
+	router.PUT("/filter/:id/result", PutFilterResult) // Store new results into a filter
+	router.GET("/filter", GetFilter)                  // Get all filters
+	router.DELETE("/filter/:id", DeleteFilter)        // Delete a filter
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
