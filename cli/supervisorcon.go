@@ -27,7 +27,9 @@ func (s *SupervisorCon) Connect() bool {
 	}
 	_, err := s._get("filter")
 	if err == nil {
-		fmt.Printf("Connected to %s\n", session["supervisor_uri"])
+		if !silent {
+			fmt.Printf("Connected to %s\n", session["supervisor_uri"])
+		}
 	} else {
 		fmt.Printf("Failed to connect: %s", err)
 		return false

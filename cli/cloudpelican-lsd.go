@@ -33,11 +33,13 @@ var conf *Conf
 var consecutiveInterruptCount int
 var interrupted bool
 var startupCommands string
+var silent bool
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
 	flag.StringVar(&startupCommands, "e", "", "Commands to execute, seperated by semi-colon")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
+	flag.BoolVar(&silent, "silent", true, "Silent, no helping output mode")
 	flag.Parse()
 }
 
