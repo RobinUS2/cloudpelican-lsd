@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,13 @@ import (
 )
 
 type SupervisorCon struct {
+}
+
+type Filter struct {
+	Regex      string `json:"regex"`
+	Name       string `json:"name"`
+	ClientHost string `json:"client_host"`
+	Id         string `json:"id"`
 }
 
 func (s *SupervisorCon) Connect() {
@@ -29,6 +37,44 @@ func (s *SupervisorCon) Ping() {
 	if err == nil {
 		fmt.Printf("Pong\n")
 	}
+}
+
+func (s *SupervisorCon) FilterByName(name string) (*Filter, error) {
+	filters, err := s.Filters()
+	if err != nil {
+		return nil, err
+	}
+	for _, filter := range filters {
+		if filter.Name == name {
+			return filter, nil
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("Filter '%s' not found", name))
+}
+
+func (s *SupervisorCon) Filters() ([]*Filter, error) {
+	data, err := s._get("filter")
+	if err != nil {
+		return nil, err
+	}
+	// Parse and create list
+	var resp map[string]interface{}
+	jErr := json.Unmarshal([]byte(data), &resp)
+	if jErr != nil {
+		return nil, jErr
+	}
+	list := make([]*Filter, 0)
+	for _, v := range resp["filters"].([]interface{}) {
+		elm := v.(map[string]interface{})
+		filter := newFilter()
+		filter.Regex = fmt.Sprintf("%s", elm["regex"])
+		filter.Name = fmt.Sprintf("%s", elm["name"])
+		filter.ClientHost = fmt.Sprintf("%s", elm["client_host"])
+		filter.Id = fmt.Sprintf("%s", elm["id"])
+		list = append(list, filter)
+	}
+
+	return list, nil
 }
 
 func (s *SupervisorCon) _get(uri string) (string, error) {
@@ -79,4 +125,8 @@ func (s *SupervisorCon) _getHttpClient() *http.Client {
 
 func NewSupervisorCon() *SupervisorCon {
 	return &SupervisorCon{}
+}
+
+func newFilter() *Filter {
+	return &Filter{}
 }

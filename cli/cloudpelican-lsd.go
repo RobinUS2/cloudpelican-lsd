@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var customConfPath string
@@ -57,6 +58,7 @@ func startConsole() {
 	CONSOLE_KEYWORDS["clearsession"] = true
 	CONSOLE_KEYWORDS["clearhistory"] = true
 	CONSOLE_KEYWORDS["history"] = true
+	CONSOLE_KEYWORDS["show filters"] = true
 
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
@@ -111,6 +113,10 @@ func handleConsole(input string) {
 		clearhistory()
 	} else if inputLower == "history" {
 		printHistory()
+	} else if inputLower == "show filters" {
+		showFilters()
+	} else if strings.Index(inputLower, "select ") == 0 {
+		executeSelect(inputLower)
 	} else if strings.Index(inputLower, "history ") == 0 {
 		split := strings.SplitN(input, "history ", 2)
 		if len(split) != 2 {
@@ -136,6 +142,64 @@ func handleConsole(input string) {
 		printConsoleError(input)
 	}
 
+}
+
+func showFilters() {
+	filters, err := supervisorCon.Filters()
+	if err != nil {
+		printConsoleError(fmt.Sprintf("%s", err))
+		return
+	}
+	fmt.Printf("FILTER NAME\n")
+	for _, filter := range filters {
+		fmt.Printf("%s\n", filter.Name)
+	}
+}
+
+func executeSelect(input string) {
+	var filterName string = ""
+	tokens := strings.Split(input, " ")
+	for i, token := range tokens {
+		var previousToken string = ""
+		if i != 0 {
+			previousToken = tokens[i-1]
+		}
+
+		// Filter name
+		if previousToken == "from" {
+			filterName = token
+		}
+	}
+	if len(filterName) < 1 {
+		printConsoleError(fmt.Sprintf("Filter '%s' not found", filterName))
+		return
+	}
+
+	// Load filter
+	filter, filterE := supervisorCon.FilterByName(filterName)
+	if filterE != nil {
+		printConsoleError(fmt.Sprintf("%s", filterE))
+		return
+	}
+
+	// Stream data
+	uri := fmt.Sprintf("filter/%s/result", filter.Id)
+	for {
+		data, respErr := supervisorCon._get(uri)
+		if respErr != nil {
+			if verbose {
+				fmt.Printf("Error while fetching results: %s", respErr)
+			}
+			time.Sleep(200 * time.Millisecond) // @todo dynamic
+			continue
+		}
+
+		// Print
+		fmt.Printf(data)
+
+		// Sleep
+		time.Sleep(200 * time.Millisecond) // @todo dynamic
+	}
 }
 
 func dispatchHistory(id string) {
