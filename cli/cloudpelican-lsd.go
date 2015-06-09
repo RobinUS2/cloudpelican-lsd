@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -54,6 +55,8 @@ func startConsole() {
 	CONSOLE_KEYWORDS["save"] = true
 	CONSOLE_KEYWORDS["ping"] = true
 	CONSOLE_KEYWORDS["clearsession"] = true
+	CONSOLE_KEYWORDS["clearhistory"] = true
+	CONSOLE_KEYWORDS["history"] = true
 
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
@@ -88,6 +91,7 @@ func startConsole() {
 }
 func handleConsole(input string) {
 	input = strings.TrimRight(input, " ;")
+	consoleAddHistory(input)
 	inputLower := strings.ToLower(input)
 	if inputLower == "help" {
 		printConsoleHelp()
@@ -103,6 +107,17 @@ func handleConsole(input string) {
 		ping()
 	} else if inputLower == "clearsession" {
 		clearSession()
+	} else if inputLower == "clearhistory" {
+		clearhistory()
+	} else if inputLower == "history" {
+		printHistory()
+	} else if strings.Index(inputLower, "history ") == 0 {
+		split := strings.SplitN(input, "history ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return
+		}
+		dispatchHistory(split[1])
 	} else if strings.Index(inputLower, "connect ") == 0 {
 		split := strings.SplitN(input, "connect ", 2)
 		if len(split) != 2 {
@@ -121,6 +136,45 @@ func handleConsole(input string) {
 		printConsoleError(input)
 	}
 
+}
+
+func dispatchHistory(id string) {
+	i, err := strconv.ParseInt(id, 10, 0)
+	if err != nil {
+		printConsoleError(fmt.Sprintf("%s", err))
+		return
+	}
+	if len(conf.CmdHistory[i]) < 1 {
+		fmt.Printf("History #%d not found\n", i)
+	}
+	handleConsole(conf.CmdHistory[i])
+}
+
+func clearhistory() {
+	conf.CmdHistory = make([]string, 0)
+	conf.Save()
+	fmt.Printf("Cleared history\n")
+}
+
+func printHistory() {
+	for i, cmd := range conf.CmdHistory {
+		fmt.Printf("%d %s\n", i, cmd)
+	}
+}
+
+func consoleAddHistory(cmd string) {
+	conf.CmdHistory = append(conf.CmdHistory, cmd)
+
+	// Purge data
+	max := 100
+	histLen := len(conf.CmdHistory)
+	if histLen > max {
+		if verbose {
+			log.Println("Cleaning console history")
+		}
+		conf.CmdHistory = conf.CmdHistory[1:]
+	}
+	conf.Save()
 }
 
 func clearSession() {
@@ -181,7 +235,10 @@ func printConsoleHelp() {
 	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
 	fmt.Printf("save\t\t\t\tSave session\n")
-	fmt.Printf("clearsession\t\t\tClears session\n")
+	fmt.Printf("history\t\t\t\tPrint recent command history\n")
+	fmt.Printf("history <id>\t\t\tExecute command from history by id\n")
+	fmt.Printf("clearsession\t\t\tClears session (connectino, settings, etc)\n")
+	fmt.Printf("clearhistory\t\t\tClears history of commands\n")
 	fmt.Printf("ping\t\t\t\tTest connection with supervisor\n")
 	fmt.Printf("help\t\t\t\tPrints this documentation\n")
 	fmt.Printf("quit\t\t\t\tExit the CloudPelican cli\n")

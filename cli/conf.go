@@ -14,6 +14,7 @@ import (
 type Conf struct {
 	Path              string            `json:"path"`
 	PersistentSession map[string]string `json:"persistent_session"`
+	CmdHistory        []string          `json:"cmd_history"`
 }
 
 func (c *Conf) Save() {
