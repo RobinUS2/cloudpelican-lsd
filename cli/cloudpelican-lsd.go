@@ -6,11 +6,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +30,8 @@ var CONSOLE_KEYWORDS_OPTS map[string]int = make(map[string]int)
 var session map[string]string = make(map[string]string)
 var supervisorCon *SupervisorCon
 var conf *Conf
+var consecutiveInterruptCount int
+var interrupted bool
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -63,6 +67,22 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
 
+	// Handle other signals
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+			// sig is a ^C, handle it
+			interrupted = true
+			consecutiveInterruptCount++
+			if consecutiveInterruptCount >= 2 {
+				fmt.Printf("Exiting\n")
+				os.Exit(0)
+			}
+		}
+	}()
+
+	// Console reader
 	reader := bufio.NewReader(os.Stdin)
 	var buffer bytes.Buffer
 	printConsoleWait()
@@ -185,20 +205,34 @@ func executeSelect(input string) {
 	// Stream data
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
 	for {
+		// Handle interrup
+		if interrupted {
+			interrupted = false
+			consecutiveInterruptCount = 0
+			fmt.Printf("Interrupted..\n")
+			break
+		}
+
+		time.Sleep(200 * time.Millisecond) // @todo dynamic
 		data, respErr := supervisorCon._get(uri)
 		if respErr != nil {
 			if verbose {
 				fmt.Printf("Error while fetching results: %s", respErr)
 			}
-			time.Sleep(200 * time.Millisecond) // @todo dynamic
 			continue
 		}
-
-		// Print
-		fmt.Printf(data)
-
-		// Sleep
-		time.Sleep(200 * time.Millisecond) // @todo dynamic
+		var res map[string]interface{}
+		jE := json.Unmarshal([]byte(data), &res)
+		if jE != nil {
+			if verbose {
+				fmt.Printf("Error while fetching results: %s", jE)
+			}
+			continue
+		}
+		list := res["results"].([]interface{})
+		for _, elm := range list {
+			fmt.Printf("%s\n", elm)
+		}
 	}
 }
 
