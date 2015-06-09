@@ -360,7 +360,9 @@ func save() {
 func auth(usr string, pwd string) {
 	session["supervisor_username"] = usr
 	session["supervisor_password"] = pwd
-	fmt.Printf("Received authentication tokens\n")
+	if !silent {
+		fmt.Printf("Received authentication tokens\n")
+	}
 }
 
 func connect(uri string) {
