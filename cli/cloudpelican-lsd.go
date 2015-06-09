@@ -359,7 +359,7 @@ func _connect() {
 }
 
 func printConsoleError(input string) {
-	fmt.Printf("Unknown input '%s'\n", input)
+	fmt.Printf("Unknown input '%s' type 'help' for explanation\n", input)
 }
 
 func printConsoleHelp() {
