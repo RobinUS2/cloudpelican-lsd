@@ -26,8 +26,11 @@ func (c *Conf) Save() {
 }
 
 func (c *Conf) Load(str string) {
+	if len(str) > 0 {
+		return
+	}
 	if err := json.Unmarshal([]byte(str), c); err != nil {
-		log.Fatal(fmt.Sprintf("Failed to load config %s", err))
+		log.Println(fmt.Sprintf("Failed to load config %s", err))
 	}
 }
 
