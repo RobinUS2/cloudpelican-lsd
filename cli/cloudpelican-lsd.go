@@ -123,6 +123,9 @@ func startConsole() {
 }
 func handleConsole(input string) {
 	input = strings.TrimRight(input, " ;")
+	if len(input) < 1 {
+		return
+	}
 	consoleAddHistory(input)
 	inputLower := strings.ToLower(input)
 	if inputLower == "help" {
@@ -188,6 +191,7 @@ func showFilters() {
 
 func executeSelect(input string) {
 	var filterName string = ""
+	var limitStr string = ""
 	tokens := strings.Split(input, " ")
 	for i, token := range tokens {
 		var previousToken string = ""
@@ -195,11 +199,27 @@ func executeSelect(input string) {
 			previousToken = tokens[i-1]
 		}
 
-		// Filter name
+		// Very simple parsing
 		if previousToken == "from" {
+			// Filter name
 			filterName = token
+		} else if previousToken == "limit" {
+			limitStr = token
 		}
 	}
+
+	// Limit
+	var limit int64 = -1
+	var limitErr error
+	if len(limitStr) > 0 {
+		limit, limitErr = strconv.ParseInt(limitStr, 10, 0)
+		if limitErr != nil {
+			printConsoleError(fmt.Sprintf("Invalid LIMIT %s", limitErr))
+			return
+		}
+	}
+
+	// Filter name
 	if len(filterName) < 1 {
 		printConsoleError(fmt.Sprintf("Filter '%s' not found", filterName))
 		return
@@ -214,6 +234,8 @@ func executeSelect(input string) {
 
 	// Stream data
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
+	var resultCount int64 = 0
+outer:
 	for {
 		// Handle interrup
 		if interrupted {
@@ -242,6 +264,10 @@ func executeSelect(input string) {
 		list := res["results"].([]interface{})
 		for _, elm := range list {
 			fmt.Printf("%s\n", elm)
+			resultCount++
+			if limit != -1 && resultCount >= limit {
+				break outer
+			}
 		}
 	}
 }
