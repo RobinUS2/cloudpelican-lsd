@@ -32,9 +32,11 @@ var supervisorCon *SupervisorCon
 var conf *Conf
 var consecutiveInterruptCount int
 var interrupted bool
+var startupCommands string
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
+	flag.StringVar(&startupCommands, "e", "", "Commands to execute, seperated by semi-colon")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
 	flag.Parse()
 }
@@ -46,6 +48,14 @@ func main() {
 
 	// Load config
 	loadConf()
+
+	// Startup commands
+	if len(startupCommands) > 0 {
+		startupCommandsList := strings.Split(startupCommands, ";")
+		for _, startupCommand := range startupCommandsList {
+			handleConsole(startupCommand)
+		}
+	}
 
 	// Listen for user input
 	startConsole()
