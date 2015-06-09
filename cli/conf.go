@@ -26,7 +26,7 @@ func (c *Conf) Save() {
 }
 
 func (c *Conf) Load(str string) {
-	if len(str) > 0 {
+	if len(str) < 1 {
 		return
 	}
 	if err := json.Unmarshal([]byte(str), c); err != nil {
@@ -83,7 +83,7 @@ func loadConf() (bool, error) {
 		session = conf.PersistentSession
 		if len(session["supervisor_uri"]) > 0 {
 			fmt.Printf("Restored session to %s\n", session["supervisor_uri"])
-			_connect()
+			_connect(false)
 		}
 	}
 

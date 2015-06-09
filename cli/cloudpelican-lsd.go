@@ -51,10 +51,7 @@ func main() {
 
 	// Startup commands
 	if len(startupCommands) > 0 {
-		startupCommandsList := strings.Split(startupCommands, ";")
-		for _, startupCommand := range startupCommandsList {
-			handleConsole(startupCommand)
-		}
+		handleConsole(startupCommands)
 	}
 
 	// Listen for user input
@@ -75,6 +72,7 @@ func startConsole() {
 	CONSOLE_KEYWORDS["show filters"] = true
 
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
+	CONSOLE_KEYWORDS_OPTS["tail"] = 2    // tail + filter name
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
 
 	// Handle other signals
@@ -121,11 +119,9 @@ func startConsole() {
 		}
 	}
 }
-func handleConsole(input string) {
-	input = strings.TrimRight(input, " ;")
-	if len(input) < 1 {
-		return
-	}
+
+func _handleConsole(input string) {
+	input = strings.TrimSpace(input)
 	consoleAddHistory(input)
 	inputLower := strings.ToLower(input)
 	if inputLower == "help" {
@@ -164,6 +160,13 @@ func handleConsole(input string) {
 			return
 		}
 		connect(split[1])
+	} else if strings.Index(inputLower, "tail ") == 0 {
+		split := strings.SplitN(input, "tail ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return
+		}
+		executeSelect(fmt.Sprintf("select * from %s", split[1]))
 	} else if strings.Index(inputLower, "auth ") == 0 {
 		split := strings.Split(input, " ")
 		if len(split) != 3 {
@@ -174,7 +177,17 @@ func handleConsole(input string) {
 	} else {
 		printConsoleError(input)
 	}
+}
 
+func handleConsole(input string) {
+	input = strings.TrimRight(input, " ;\n\t")
+	if len(input) < 1 {
+		return
+	}
+	cmds := strings.Split(input, ";")
+	for _, cmd := range cmds {
+		_handleConsole(cmd)
+	}
 }
 
 func showFilters() {
@@ -330,7 +343,7 @@ func ping() {
 
 func ensureConnected() bool {
 	if supervisorCon == nil {
-		fmt.Printf("Not connected\n")
+		fmt.Printf("Not connected, use 'auth' and 'connect' (details see 'help')\n")
 		return false
 	}
 	return true
@@ -350,12 +363,14 @@ func auth(usr string, pwd string) {
 
 func connect(uri string) {
 	session["supervisor_uri"] = uri
-	_connect()
+	_connect(true)
 }
 
-func _connect() {
+func _connect(interactive bool) {
 	supervisorCon = NewSupervisorCon()
-	supervisorCon.Connect()
+	if supervisorCon.Connect() && interactive {
+		fmt.Printf("Use 'save' to store authentication and connection details for future usage\n")
+	}
 }
 
 func printConsoleError(input string) {
@@ -369,6 +384,7 @@ func printConsoleHelp() {
 	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
 	fmt.Printf("show filters\t\t\tDisplay list of filters configured\n")
 	fmt.Printf("select\t\t\t\tExecute SQL-like queries, example: select * from <filter_name>\n")
+	fmt.Printf("tail <filter>\t\t\tTail stream of messages for a specific filter name\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
 	fmt.Printf("save\t\t\t\tSave session\n")
 	fmt.Printf("history\t\t\t\tPrint recent command history\n")

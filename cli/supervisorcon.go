@@ -21,7 +21,7 @@ type Filter struct {
 	Id         string `json:"id"`
 }
 
-func (s *SupervisorCon) Connect() {
+func (s *SupervisorCon) Connect() bool {
 	if verbose {
 		log.Printf("Connecting to %s", session["supervisor_uri"])
 	}
@@ -30,7 +30,9 @@ func (s *SupervisorCon) Connect() {
 		fmt.Printf("Connected to %s\n", session["supervisor_uri"])
 	} else {
 		fmt.Printf("Failed to connect: %s", err)
+		return false
 	}
+	return true
 }
 
 func (s *SupervisorCon) Ping() {
