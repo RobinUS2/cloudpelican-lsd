@@ -115,7 +115,7 @@ func (s *SupervisorCon) _get(uri string) (string, error) {
 }
 
 func (s *SupervisorCon) _getBasicAuthToken() string {
-	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", session["supervisor_username"], session["supervisor_password"]))) // @todo dynamic
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", session["supervisor_username"], session["supervisor_password"])))
 }
 
 func (s *SupervisorCon) _getHttpClient() *http.Client {

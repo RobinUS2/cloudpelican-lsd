@@ -331,6 +331,8 @@ func printConsoleHelp() {
 	fmt.Printf("CMD\t\t\t\tDESCRIPTION\n")
 	fmt.Printf("auth <usr> <pwd>\t\tSet authentication details\n")
 	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
+	fmt.Printf("show filters\t\t\tDisplay list of filters configured\n")
+	fmt.Printf("select\t\t\t\tExecute SQL-like queries, example: select * from <filter_name>\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
 	fmt.Printf("save\t\t\t\tSave session\n")
 	fmt.Printf("history\t\t\t\tPrint recent command history\n")
