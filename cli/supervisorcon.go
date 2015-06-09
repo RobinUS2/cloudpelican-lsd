@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type SupervisorCon struct {
@@ -45,7 +46,7 @@ func (s *SupervisorCon) FilterByName(name string) (*Filter, error) {
 		return nil, err
 	}
 	for _, filter := range filters {
-		if filter.Name == name {
+		if strings.ToLower(filter.Name) == strings.ToLower(name) {
 			return filter, nil
 		}
 	}
