@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -217,7 +218,12 @@ func createFilter(input string) {
 		return
 	}
 
-	// @todo validate filter name with regex, lowercase
+	// Validate filter name
+	matched, _ := regexp.MatchString("^([a-z0-9_]+)$", filterName)
+	if !matched {
+		printConsoleError("Filter name can only contain a-z, 0-9 and _")
+		return
+	}
 
 	// Check duplicate name filter
 	filterdup, _ := supervisorCon.FilterByName(filterName)
