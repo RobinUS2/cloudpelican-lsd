@@ -280,6 +280,7 @@ func showFilters() {
 func executeSelect(input string) {
 	// Basic parsing
 	var filterName string = ""
+	var where string = ".*"
 	var limitStr string = ""
 	tokens := strings.Split(input, " ")
 	for i, token := range tokens {
@@ -293,7 +294,11 @@ func executeSelect(input string) {
 			// Filter name
 			filterName = token
 		} else if previousToken == "limit" {
+			// Limit
 			limitStr = token
+		} else if previousToken == "where" {
+			// WHERE statement
+			where = strings.TrimRight(strings.TrimLeft(token, "'"), "'")
 		}
 	}
 
@@ -332,7 +337,7 @@ func executeSelect(input string) {
 
 			// Create filter
 			tmpFilterName = fmt.Sprintf("tmp_%d", time.Now().Unix())
-			supervisorCon.CreateFilter(tmpFilterName, ".*")
+			supervisorCon.CreateFilter(tmpFilterName, where)
 			filter, _ = supervisorCon.FilterByName(tmpFilterName)
 		}
 	}
