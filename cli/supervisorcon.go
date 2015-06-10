@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -42,6 +43,27 @@ func (s *SupervisorCon) Ping() {
 	if err == nil {
 		fmt.Printf("Pong\n")
 	}
+}
+
+func (s *SupervisorCon) CreateFilter(name string, regex string) (*Filter, error) {
+	if verbose {
+		log.Printf("Creating filter '%s' with regex '%s'", name, regex)
+	}
+	s._post(fmt.Sprintf("filter?name=%s&regex=%s", url.QueryEscape(name), url.QueryEscape(regex)))
+	return s.FilterByName(name)
+}
+
+func (s *SupervisorCon) RemoveFilter(name string) bool {
+	if verbose {
+		log.Printf("Deleting filter '%s'", name)
+	}
+	filter, e := s.FilterByName(name)
+	if e != nil {
+		return false
+	}
+	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(filter.Id)))
+	verify, _ := s.FilterByName(name)
+	return verify == nil
 }
 
 func (s *SupervisorCon) FilterByName(name string) (*Filter, error) {
@@ -83,11 +105,23 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 }
 
 func (s *SupervisorCon) _get(uri string) (string, error) {
+	return s._doRequest("GET", uri)
+}
+
+func (s *SupervisorCon) _post(uri string) (string, error) {
+	return s._doRequest("POST", uri)
+}
+
+func (s *SupervisorCon) _delete(uri string) (string, error) {
+	return s._doRequest("DELETE", uri)
+}
+
+func (s *SupervisorCon) _doRequest(method string, uri string) (string, error) {
 	// Client
 	client := s._getHttpClient()
 
 	// Request
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", session["supervisor_uri"], uri), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s%s", session["supervisor_uri"], uri), nil)
 	if err != nil {
 		return "", err
 	}

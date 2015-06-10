@@ -148,6 +148,15 @@ func _handleConsole(input string) {
 		showFilters()
 	} else if strings.Index(inputLower, "select ") == 0 {
 		executeSelect(inputLower)
+	} else if strings.Index(inputLower, "create filter ") == 0 {
+		createFilter(inputLower)
+	} else if strings.Index(inputLower, "drop filter ") == 0 {
+		split := strings.SplitN(input, "drop filter ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return
+		}
+		dropFilter(split[1])
 	} else if strings.Index(inputLower, "history ") == 0 {
 		split := strings.SplitN(input, "history ", 2)
 		if len(split) != 2 {
@@ -181,6 +190,59 @@ func _handleConsole(input string) {
 	}
 }
 
+// Select execution, example input: "create filter <filter_name> as '<regex_here>' [with options {"key": "value"}]" [] indicates optional
+func createFilter(input string) {
+	// Basic parsing
+	var filterName string = ""
+	var regex string = ""
+	tokens := strings.Split(input, " ")
+	for i, token := range tokens {
+		var previousToken string = ""
+		if i != 0 {
+			previousToken = tokens[i-1]
+		}
+
+		// Very simple parsing
+		if previousToken == "filter" && tokens[i-2] == "create" {
+			// Filter name
+			filterName = token
+		} else if previousToken == "as" {
+			regex = strings.TrimRight(strings.TrimLeft(token, "'"), "'")
+		}
+	}
+
+	// Filter name
+	if len(filterName) < 1 {
+		printConsoleError(fmt.Sprintf("You must provide a filter name", filterName))
+		return
+	}
+
+	// @todo validate filter name with regex, lowercase
+
+	// Check duplicate name filter
+	filterdup, _ := supervisorCon.FilterByName(filterName)
+	if filterdup != nil {
+		printConsoleError(fmt.Sprintf("There already exist a filter with the name %s", filterName))
+		return
+	}
+
+	// Create
+	_, filterErr := supervisorCon.CreateFilter(filterName, regex)
+	if filterErr != nil {
+		printConsoleError("Failed to create filter")
+		return
+	}
+	fmt.Printf("Created filter '%s'\n", filterName)
+}
+
+// Drop filter (removing it)
+func dropFilter(name string) {
+	res := supervisorCon.RemoveFilter(name)
+	if res {
+		fmt.Printf("Removed filter '%s'\n", name)
+	}
+}
+
 func handleConsole(input string) {
 	input = strings.TrimRight(input, " ;\n\t")
 	if len(input) < 1 {
@@ -204,7 +266,9 @@ func showFilters() {
 	}
 }
 
+// Select execution, example input: "select * from <filter_name> [limit 1234]" [] indicates optional
 func executeSelect(input string) {
+	// Basic parsing
 	var filterName string = ""
 	var limitStr string = ""
 	tokens := strings.Split(input, " ")
@@ -387,8 +451,10 @@ func printConsoleHelp() {
 	fmt.Printf("auth <usr> <pwd>\t\tSet authentication details\n")
 	fmt.Printf("connect <host>\t\t\tConnect to supervisor on host\n")
 	fmt.Printf("show filters\t\t\tDisplay list of filters configured\n")
-	fmt.Printf("select\t\t\t\tExecute SQL-like queries, example: select * from <filter_name>\n")
+	fmt.Printf("select\t\t\t\tExecute SQL-like queries, example: select * from <filter_name>;\n")
 	fmt.Printf("tail <filter>\t\t\tTail stream of messages for a specific filter name\n")
+	fmt.Printf("create filter\t\t\tCreate a new filter, example: create filter <filter_name> as '<regex>';\n")
+	fmt.Printf("drop filter\t\t\tRemove a filter, example: drop filter <filter_name>;\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
 	fmt.Printf("save\t\t\t\tSave session\n")
 	fmt.Printf("history\t\t\t\tPrint recent command history\n")
