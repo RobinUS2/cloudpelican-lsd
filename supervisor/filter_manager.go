@@ -79,7 +79,9 @@ func (f *Filter) AddResults(res []string) bool {
 	currentCount := len(filterManager.filterResults[f.Id])
 	newPlusCurrent := newCount + currentCount
 	if newPlusCurrent > maxMsgMemory {
-		log.Printf("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
+		if verbose {
+			log.Printf("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
+		}
 		tmp := make([]string, 0)
 		tooMany := newPlusCurrent - maxMsgMemory
 		for i := tooMany; i < currentCount-1; i++ {

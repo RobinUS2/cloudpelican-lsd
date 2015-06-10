@@ -24,6 +24,7 @@ var dbFile string
 var filterManager *FilterManager
 var maxMsgMemory int
 var maxMsgBatch int
+var verbose bool
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
@@ -32,6 +33,7 @@ func init() {
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
 	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
 	flag.IntVar(&maxMsgBatch, "max-msg-batch", 10000, "Maximum amount of messages sent in a single batch")
+	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
 	flag.Parse()
 }
 
