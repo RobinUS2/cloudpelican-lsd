@@ -35,12 +35,14 @@ var consecutiveInterruptCount int
 var interrupted bool
 var startupCommands string
 var silent bool
+var allowAutoCreateFilter bool
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
 	flag.StringVar(&startupCommands, "e", "", "Commands to execute, seperated by semi-colon")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
 	flag.BoolVar(&silent, "silent", true, "Silent, no helping output mode")
+	flag.BoolVar(&allowAutoCreateFilter, "allow-temporary-filters", true, "Automatically create temporary filters from select statements")
 	flag.Parse()
 }
 
@@ -52,9 +54,25 @@ func main() {
 	// Load config
 	loadConf()
 
+	// Handle other signals
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+			// sig is a ^C, handle it
+			interrupted = true
+			consecutiveInterruptCount++
+			if consecutiveInterruptCount >= 2 {
+				fmt.Printf("Exiting\n")
+				os.Exit(0)
+			}
+		}
+	}()
+
 	// Startup commands
 	if len(startupCommands) > 0 {
 		handleConsole(startupCommands)
+		os.Exit(0)
 	}
 
 	// Listen for user input
@@ -77,21 +95,6 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["tail"] = 2    // tail + filter name
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
-
-	// Handle other signals
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for _ = range c {
-			// sig is a ^C, handle it
-			interrupted = true
-			consecutiveInterruptCount++
-			if consecutiveInterruptCount >= 2 {
-				fmt.Printf("Exiting\n")
-				os.Exit(0)
-			}
-		}
-	}()
 
 	// Console reader
 	reader := bufio.NewReader(os.Stdin)
@@ -273,6 +276,7 @@ func showFilters() {
 }
 
 // Select execution, example input: "select * from <filter_name> [limit 1234]" [] indicates optional
+// example input from stream: "select * from stream:<stream_name> [limit 1234]" [] indicates optional
 func executeSelect(input string) {
 	// Basic parsing
 	var filterName string = ""
@@ -311,10 +315,26 @@ func executeSelect(input string) {
 	}
 
 	// Load filter
+	var tmpFilterName string = ""
 	filter, filterE := supervisorCon.FilterByName(filterName)
 	if filterE != nil {
-		printConsoleError(fmt.Sprintf("%s", filterE))
-		return
+		if allowAutoCreateFilter == false {
+			printConsoleError(fmt.Sprintf("%s", filterE))
+			return
+		} else {
+			// Auto create filter from stream
+			split := strings.Split(filterName, "stream:")
+			if len(split) != 2 || split[1] != "default" {
+				printConsoleError("Can not create temporary filter from stream, try 'select * from stream:default'")
+				return
+			}
+			//streamName := split[1]
+
+			// Create filter
+			tmpFilterName = fmt.Sprintf("tmp_%d", time.Now().Unix())
+			supervisorCon.CreateFilter(tmpFilterName, ".*")
+			filter, _ = supervisorCon.FilterByName(tmpFilterName)
+		}
 	}
 
 	// Stream data
@@ -327,6 +347,9 @@ outer:
 			interrupted = false
 			consecutiveInterruptCount = 0
 			fmt.Printf("Interrupted..\n")
+			if len(tmpFilterName) > 0 {
+				supervisorCon.RemoveFilter(tmpFilterName)
+			}
 			break
 		}
 
