@@ -83,7 +83,6 @@ func (f *Filter) AddResults(res []string) bool {
 		tmp := make([]string, 0)
 		tooMany := newPlusCurrent - maxMsgMemory
 		for i := tooMany; i < currentCount-1; i++ {
-			log.Printf("%d", i)
 			tmp = append(tmp, filterManager.filterResults[f.Id][i])
 		}
 		filterManager.filterResults[f.Id] = tmp
