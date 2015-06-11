@@ -107,6 +107,7 @@ func startConsole() {
 	}
 	defer restoreTerminalAndExit(term, oldState)
 	term.SetPrompt(getConsoleWait())
+	term.AutoCompleteCallback = processAutocomplete
 
 	// Main loop
 	for {
@@ -523,4 +524,9 @@ func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
 		term.ReleaseFromStdInOut()
 	}
 	os.Exit(0)
+}
+
+func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int) {
+	// TODO
+	return nil, pos
 }
