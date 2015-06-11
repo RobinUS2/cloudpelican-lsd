@@ -4,8 +4,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/carmark/pseudo-terminal-go/terminal"
 )
 
 var customConfPath string
@@ -36,6 +36,8 @@ var interrupted bool
 var startupCommands string
 var silent bool
 var allowAutoCreateFilter bool
+var term *terminal.Terminal
+var oldState *terminal.State
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -64,7 +66,7 @@ func main() {
 			consecutiveInterruptCount++
 			if consecutiveInterruptCount >= 2 {
 				fmt.Printf("Exiting\n")
-				os.Exit(0)
+				restoreTerminalAndExit(term, oldState)
 			}
 		}
 	}()
@@ -72,7 +74,7 @@ func main() {
 	// Startup commands
 	if len(startupCommands) > 0 {
 		handleConsole(startupCommands)
-		os.Exit(0)
+		restoreTerminalAndExit(term, oldState)
 	}
 
 	// Listen for user input
@@ -97,30 +99,32 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
 
 	// Console reader
-	reader := bufio.NewReader(os.Stdin)
-	var buffer bytes.Buffer
-	printConsoleWait()
+	term, _ = terminal.NewWithStdInOut()
+	oldState, err := terminal.MakeRaw(0)
+	if err != nil {
+		panic(err)
+	}
+	defer restoreTerminalAndExit(term, oldState)
+	term.SetPrompt(getConsoleWait())
+
+	// Main loop
 	for {
-		input, err := reader.ReadString('\n')
+		input, err := term.ReadLine()
+		if err != nil && strings.Contains(err.Error(), "control-c break") {
+			restoreTerminalAndExit(term, oldState)
+		}
+
 		if err != nil {
 			fmt.Println("Error: ", err)
 		} else {
 			input = strings.TrimSpace(input)
-			buffer.WriteString(input)
-			bufStr := buffer.String()
-			lowerStr := strings.ToLower(bufStr)
+			lowerStr := strings.ToLower(input)
 			splitLower := strings.Split(lowerStr, " ")
 
 			// Semi colon?
-			if strings.Contains(bufStr, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
+			if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
 				// Flush buffer
-				handleConsole(bufStr)
-				printConsoleWait()
-				buffer.Reset()
-			} else {
-				// Whitespace after buffer
-				buffer.WriteString(" ")
-				printConsoleInputPad()
+				handleConsole(input)
 			}
 		}
 	}
@@ -133,7 +137,7 @@ func _handleConsole(input string) {
 	if inputLower == "help" {
 		printConsoleHelp()
 	} else if inputLower == "quit" || inputLower == "exit" {
-		os.Exit(0)
+		restoreTerminalAndExit(term, oldState)
 	} else if inputLower == "clear" {
 		c := exec.Command("clear")
 		c.Stdout = os.Stdout
@@ -501,10 +505,16 @@ func printConsoleHelp() {
 	fmt.Printf("\n")
 }
 
-func printConsoleWait() {
-	fmt.Printf("%s%s", CONSOLE_PREFIX, CONSOLE_SEP)
+func getConsoleWait() string {
+	return fmt.Sprintf("%s%s", CONSOLE_PREFIX, CONSOLE_SEP)
 }
 
-func printConsoleInputPad() {
-	fmt.Printf("%s%s", strings.Repeat(" ", len(CONSOLE_PREFIX)), CONSOLE_SEP)
+func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
+	if oldState != nil {
+		terminal.Restore(0, oldState)
+	}
+	if term != nil {
+		term.ReleaseFromStdInOut()
+	}
+	os.Exit(0)
 }
