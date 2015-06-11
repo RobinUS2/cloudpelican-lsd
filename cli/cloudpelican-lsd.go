@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -110,6 +111,11 @@ func startConsole() {
 	// Main loop
 	for {
 		input, err := term.ReadLine()
+		if err == io.EOF {
+			term.Write([]byte(input))
+			fmt.Println()
+			restoreTerminalAndExit(term, oldState)
+		}
 		if err != nil && strings.Contains(err.Error(), "control-c break") {
 			restoreTerminalAndExit(term, oldState)
 		}
