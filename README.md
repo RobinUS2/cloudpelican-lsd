@@ -56,4 +56,6 @@ $ cloudpelican> auth <username> <password>
 $ cloudpelican> connect http://<supervisor_hostname>:<port>/
 $ cloudpelican> ping
 Pong
+$ cloudpelican> save
+Saved session
 ```
