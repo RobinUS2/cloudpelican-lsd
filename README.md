@@ -7,7 +7,11 @@ CloudPelican LSD (log stream dump) is designed for analyzing realtime log stream
 ### Data Flow ###
 [application] => [rsyslog on host] => [kafka] => [storm] => [cloudpelican supervisor] => [cloudpelican CLI]
 
-### Building ###
+### Examples ###
+Tail all log files in your CLI:
+`cloudpelican -e "tail stream:default"`
+
+# Building #
 In order to use Cloudpelican LSD you need clone this repository, install a few basic tools and follow the instructions below. All Java source code has to be compiled with JDK 1.8
 ```
 git clone git@github.com:RobinUS2/cloudpelican-lsd.git
