@@ -39,6 +39,7 @@ var silent bool
 var allowAutoCreateFilter bool
 var term *terminal.Terminal
 var oldState *terminal.State
+var cmdFinishChan chan bool
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -57,9 +58,14 @@ func main() {
 	// Load config
 	loadConf()
 
+	cmdFinishChan = make(chan bool, 1)
+
 	// Startup commands
 	if len(startupCommands) > 0 {
-		handleConsole(startupCommands)
+		wait := handleConsole(startupCommands)
+		if wait {
+			<-cmdFinishChan
+		}
 		restoreTerminalAndExit(term, oldState)
 	}
 
@@ -140,7 +146,7 @@ func handleInterrupt() {
 	}
 }
 
-func _handleConsole(input string) {
+func _handleConsole(input string) bool {
 	input = strings.TrimSpace(input)
 	consoleAddHistory(input)
 	inputLower := strings.ToLower(input)
@@ -172,40 +178,42 @@ func _handleConsole(input string) {
 		split := strings.SplitN(input, "drop filter ", 2)
 		if len(split) != 2 {
 			printConsoleError(input)
-			return
+			return false
 		}
 		dropFilter(split[1])
 	} else if strings.Index(inputLower, "history ") == 0 {
 		split := strings.SplitN(input, "history ", 2)
 		if len(split) != 2 {
 			printConsoleError(input)
-			return
+			return false
 		}
 		dispatchHistory(split[1])
 	} else if strings.Index(inputLower, "connect ") == 0 {
 		split := strings.SplitN(input, "connect ", 2)
 		if len(split) != 2 {
 			printConsoleError(input)
-			return
+			return false
 		}
 		connect(split[1])
 	} else if strings.Index(inputLower, "tail ") == 0 {
 		split := strings.SplitN(input, "tail ", 2)
 		if len(split) != 2 {
 			printConsoleError(input)
-			return
+			return false
 		}
 		executeSelect(fmt.Sprintf("select * from %s", split[1]))
+		return true
 	} else if strings.Index(inputLower, "auth ") == 0 {
 		split := strings.Split(input, " ")
 		if len(split) != 3 {
 			printConsoleError(input)
-			return
+			return false
 		}
 		auth(split[1], split[2])
 	} else {
 		printConsoleError(input)
 	}
+	return false
 }
 
 // Select execution, example input: "create filter <filter_name> as '<regex_here>' [with options {"key": "value"}]" [] indicates optional
@@ -266,15 +274,20 @@ func dropFilter(name string) {
 	}
 }
 
-func handleConsole(input string) {
+func handleConsole(input string) bool {
 	input = strings.TrimRight(input, " ;\n\t")
 	if len(input) < 1 {
-		return
+		return false
 	}
 	cmds := strings.Split(input, ";")
+	var wait bool
 	for _, cmd := range cmds {
-		_handleConsole(cmd)
+		subWait := _handleConsole(cmd)
+		if subWait {
+			wait = true
+		}
 	}
+	return wait
 }
 
 func showFilters() {
@@ -356,6 +369,11 @@ func executeSelect(input string) {
 		}
 	}
 
+	// Clear channel
+	if len(cmdFinishChan) > 0 {
+		<-cmdFinishChan
+	}
+
 	// Stream data
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
 	var resultCount int64 = 0
@@ -400,6 +418,7 @@ func executeSelect(input string) {
 			}
 		}
 		fmt.Printf(getConsoleWait())
+		cmdFinishChan <- true
 	}()
 }
 
