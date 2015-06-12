@@ -7,12 +7,19 @@ CloudPelican LSD (log stream dump) is designed for analyzing realtime log stream
 ### Data Flow ###
 [application] => [rsyslog on host] => [kafka] => [storm] => [cloudpelican supervisor] => [cloudpelican CLI]
 
-### Getting Started in local mode ###
+### Building ###
+In order to use Cloudpelican LSD you need clone this repository, install a few basic tools and follow the instructions below. All Java source code has to be compiled with JDK 1.8
 ```
 git clone git@github.com:RobinUS2/cloudpelican-lsd.git
+brew install go
+brew install maven
+```
+
+### Starting storm ###
+```
 cd cloudpelican-lsd/storm
 mvn clean install
-java -jar java -jar ~/.m2/repository/nl/us2/cloudpelican/storm-processor/1.0-SNAPSHOT/storm-proceor-1.0-SNAPSHOT-jar-with-dependencies.jar -zookeeper=zookeeper1.domain.com:2181,zookeeper2.domain.com:2181,zookeeper3.domain.com:2181 -topic=my_logging -grep=this
+java -jar java -jar ~/.m2/repository/nl/us2/cloudpelican/storm-processor/1.0-SNAPSHOT/storm-proceor-1.0-SNAPSHOT-jar-with-dependencies.jar -zookeeper=zookeeper1.domain.com:2181,zookeeper2.domain.com:2181,zookeeper3.domain.com:2181 -topic=my_logging -submit
 ```
 
 ### Starting the CLI ###
@@ -21,4 +28,12 @@ cd cloudpelican-lsd/cli
 ./build.sh # Uses go build to compile the binary
 ./link_binary.sh # This will add a symlink to /usr/bin/cloudpelican for easy use
 cloudpelican
+```
+
+### Running storm in local mode ###
+```
+git clone git@github.com:RobinUS2/cloudpelican-lsd.git
+cd cloudpelican-lsd/storm
+mvn clean install
+java -jar java -jar ~/.m2/repository/nl/us2/cloudpelican/storm-processor/1.0-SNAPSHOT/storm-proceor-1.0-SNAPSHOT-jar-with-dependencies.jar -zookeeper=zookeeper1.domain.com:2181,zookeeper2.domain.com:2181,zookeeper3.domain.com:2181 -topic=my_logging -grep=this
 ```
