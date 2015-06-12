@@ -98,6 +98,17 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 		filter.Name = fmt.Sprintf("%s", elm["name"])
 		filter.ClientHost = fmt.Sprintf("%s", elm["client_host"])
 		filter.Id = fmt.Sprintf("%s", elm["id"])
+
+		// Tmp?
+		if strings.HasPrefix(filter.Name, TMP_FILTER_PREFIX) {
+			// @todo Remove if they are older than x days
+			// go func(id string) {
+			// 	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
+			// }(filter.Id)
+			continue
+		}
+
+		// Append
 		list = append(list, filter)
 	}
 

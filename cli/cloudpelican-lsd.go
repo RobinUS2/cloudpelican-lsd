@@ -25,6 +25,7 @@ var verbose bool
 
 const CONSOLE_PREFIX string = "cloudpelican"
 const CONSOLE_SEP string = "> "
+const TMP_FILTER_PREFIX string = "__tmp__"
 
 var CONSOLE_KEYWORDS map[string]bool = make(map[string]bool)
 var CONSOLE_KEYWORDS_OPTS map[string]int = make(map[string]int)
@@ -363,7 +364,7 @@ func executeSelect(input string) {
 			//streamName := split[1]
 
 			// Create filter
-			tmpFilterName = fmt.Sprintf("tmp_%d", time.Now().Unix())
+			tmpFilterName = fmt.Sprintf("%d", TMP_FILTER_PREFIX, time.Now().Unix())
 			supervisorCon.CreateFilter(tmpFilterName, where)
 			filter, _ = supervisorCon.FilterByName(tmpFilterName)
 		}
