@@ -8,7 +8,14 @@ CloudPelican LSD (log stream dump) is designed for analyzing realtime log stream
 [application] => [rsyslog on host] => [kafka] => [storm] => [cloudpelican supervisor] => [cloudpelican CLI]
 
 ### Examples ###
-Tail all log files in your CLI:
+Tail all your files with a regex:
+```
+$ cloudpelican>
+$ cloudpelican> tail stream:default where 'kernel';
+$ your messages matching keyword 'kernel' (which is a regex)
+```
+
+Tail all log files non-interactively:
 `cloudpelican -e "tail stream:default"`
 
 # Building #
