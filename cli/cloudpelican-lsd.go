@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -90,14 +91,16 @@ func startConsole() {
 		panic(err)
 	}
 	defer restoreTerminalAndExit(term, oldState)
-	term.SetPrompt(getConsoleWait())
+	term.SetPrompt("")
+	fmt.Printf("%s", getConsoleWait())
 	term.AutoCompleteCallback = processAutocomplete
 
 	// Main loop
+	var lineBuffer bytes.Buffer
 	for {
-		input, err := term.ReadLine()
+		line, err := term.ReadLine()
 		if err == io.EOF {
-			term.Write([]byte(input))
+			term.Write([]byte(line))
 			fmt.Println()
 			restoreTerminalAndExit(term, oldState)
 		}
@@ -107,6 +110,8 @@ func startConsole() {
 			if err != nil {
 				fmt.Println("Error: ", err)
 			} else {
+				lineBuffer.WriteString(fmt.Sprintf("%s ", line))
+				input := lineBuffer.String()
 				input = strings.TrimSpace(input)
 				lowerStr := strings.ToLower(input)
 				splitLower := strings.Split(lowerStr, " ")
@@ -114,7 +119,11 @@ func startConsole() {
 				// Semi colon?
 				if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
 					// Flush buffer
+					lineBuffer.Reset()
 					handleConsole(input)
+					fmt.Printf("%s", getConsoleWait())
+				} else {
+					printConsoleInputPad()
 				}
 			}
 		}
@@ -514,6 +523,10 @@ func getConsoleWait() string {
 	return fmt.Sprintf("%s%s", CONSOLE_PREFIX, CONSOLE_SEP)
 }
 
+func printConsoleInputPad() {
+	fmt.Printf("%s%s", strings.Repeat(" ", len(CONSOLE_PREFIX)), CONSOLE_SEP)
+}
+
 func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
 	if oldState != nil {
 		terminal.Restore(0, oldState)
@@ -525,6 +538,35 @@ func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
 }
 
 func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int) {
-	// TODO
+	// Only for tabs
+	if key != 9 {
+		return nil, pos
+	}
+
+	// String
+	lineStr := strings.ToLower(strings.TrimSpace(string(line)))
+
+	// Options placeholder
+	opts := make([]string, 0)
+
+	// Look for console keywords
+	for k, _ := range CONSOLE_KEYWORDS {
+		if strings.Index(k, lineStr) == 0 {
+			opts = append(opts, k)
+		}
+	}
+
+	// Look for console methods with options
+	for k, _ := range CONSOLE_KEYWORDS_OPTS {
+		if strings.Index(k, lineStr) == 0 {
+			opts = append(opts, k)
+		}
+	}
+
+	// Only suggest if we have one option left
+	if len(opts) == 1 {
+		var opt = opts[0]
+		return []byte(opt), pos + len(opt) - len(lineStr)
+	}
 	return nil, pos
 }
