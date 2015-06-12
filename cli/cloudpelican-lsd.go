@@ -538,6 +538,15 @@ func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
 }
 
 func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int) {
+	// Handle cursor interactions (ctrl+a = begin, ctrl+e = end)
+	if key == 1 {
+		// Begin of line
+		return line, 0
+	} else if key == 5 {
+		// Begin of line
+		return line, len(line)
+	}
+
 	// Only for tabs
 	if key != 9 {
 		return nil, pos
