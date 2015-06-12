@@ -4,19 +4,19 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/carmark/pseudo-terminal-go/terminal"
 )
 
 var customConfPath string
@@ -36,6 +36,8 @@ var interrupted bool
 var startupCommands string
 var silent bool
 var allowAutoCreateFilter bool
+var term *terminal.Terminal
+var oldState *terminal.State
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -54,25 +56,10 @@ func main() {
 	// Load config
 	loadConf()
 
-	// Handle other signals
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for _ = range c {
-			// sig is a ^C, handle it
-			interrupted = true
-			consecutiveInterruptCount++
-			if consecutiveInterruptCount >= 2 {
-				fmt.Printf("Exiting\n")
-				os.Exit(0)
-			}
-		}
-	}()
-
 	// Startup commands
 	if len(startupCommands) > 0 {
 		handleConsole(startupCommands)
-		os.Exit(0)
+		restoreTerminalAndExit(term, oldState)
 	}
 
 	// Listen for user input
@@ -97,32 +84,50 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
 
 	// Console reader
-	reader := bufio.NewReader(os.Stdin)
-	var buffer bytes.Buffer
-	printConsoleWait()
-	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error: ", err)
-		} else {
-			input = strings.TrimSpace(input)
-			buffer.WriteString(input)
-			bufStr := buffer.String()
-			lowerStr := strings.ToLower(bufStr)
-			splitLower := strings.Split(lowerStr, " ")
+	term, _ = terminal.NewWithStdInOut()
+	oldState, err := terminal.MakeRaw(0)
+	if err != nil {
+		panic(err)
+	}
+	defer restoreTerminalAndExit(term, oldState)
+	term.SetPrompt(getConsoleWait())
+	term.AutoCompleteCallback = processAutocomplete
 
-			// Semi colon?
-			if strings.Contains(bufStr, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
-				// Flush buffer
-				handleConsole(bufStr)
-				printConsoleWait()
-				buffer.Reset()
+	// Main loop
+	for {
+		input, err := term.ReadLine()
+		if err == io.EOF {
+			term.Write([]byte(input))
+			fmt.Println()
+			restoreTerminalAndExit(term, oldState)
+		}
+		if err != nil && strings.Contains(err.Error(), "control-c break") {
+			handleInterrupt()
+		} else {
+			if err != nil {
+				fmt.Println("Error: ", err)
 			} else {
-				// Whitespace after buffer
-				buffer.WriteString(" ")
-				printConsoleInputPad()
+				input = strings.TrimSpace(input)
+				lowerStr := strings.ToLower(input)
+				splitLower := strings.Split(lowerStr, " ")
+
+				// Semi colon?
+				if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
+					// Flush buffer
+					handleConsole(input)
+				}
 			}
 		}
+	}
+}
+
+func handleInterrupt() {
+	// sig is a ^C, handle it
+	interrupted = true
+	consecutiveInterruptCount++
+	if consecutiveInterruptCount >= 2 {
+		fmt.Printf("Exiting\n")
+		restoreTerminalAndExit(term, oldState)
 	}
 }
 
@@ -133,7 +138,7 @@ func _handleConsole(input string) {
 	if inputLower == "help" {
 		printConsoleHelp()
 	} else if inputLower == "quit" || inputLower == "exit" {
-		os.Exit(0)
+		restoreTerminalAndExit(term, oldState)
 	} else if inputLower == "clear" {
 		c := exec.Command("clear")
 		c.Stdout = os.Stdout
@@ -345,44 +350,48 @@ func executeSelect(input string) {
 	// Stream data
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
 	var resultCount int64 = 0
-outer:
-	for {
-		// Handle interrup
-		if interrupted {
-			interrupted = false
-			consecutiveInterruptCount = 0
-			fmt.Printf("Interrupted..\n")
-			if len(tmpFilterName) > 0 {
-				supervisorCon.RemoveFilter(tmpFilterName)
+	go func() {
+		fmt.Println()
+	outer:
+		for {
+			// Handle interrup
+			if interrupted {
+				interrupted = false
+				consecutiveInterruptCount = 0
+				fmt.Printf("Interrupted..\n")
+				if len(tmpFilterName) > 0 {
+					supervisorCon.RemoveFilter(tmpFilterName)
+				}
+				break
 			}
-			break
-		}
 
-		time.Sleep(200 * time.Millisecond) // @todo dynamic
-		data, respErr := supervisorCon._get(uri)
-		if respErr != nil {
-			if verbose {
-				fmt.Printf("Error while fetching results: %s", respErr)
+			time.Sleep(200 * time.Millisecond) // @todo dynamic
+			data, respErr := supervisorCon._get(uri)
+			if respErr != nil {
+				if verbose {
+					fmt.Printf("Error while fetching results: %s", respErr)
+				}
+				continue
 			}
-			continue
-		}
-		var res map[string]interface{}
-		jE := json.Unmarshal([]byte(data), &res)
-		if jE != nil {
-			if verbose {
-				fmt.Printf("Error while fetching results: %s", jE)
+			var res map[string]interface{}
+			jE := json.Unmarshal([]byte(data), &res)
+			if jE != nil {
+				if verbose {
+					fmt.Printf("Error while fetching results: %s", jE)
+				}
+				continue
 			}
-			continue
-		}
-		list := res["results"].([]interface{})
-		for _, elm := range list {
-			fmt.Printf("%s\n", elm)
-			resultCount++
-			if limit != -1 && resultCount >= limit {
-				break outer
+			list := res["results"].([]interface{})
+			for _, elm := range list {
+				fmt.Printf("%s\n", elm)
+				resultCount++
+				if limit != -1 && resultCount >= limit {
+					break outer
+				}
 			}
 		}
-	}
+		fmt.Printf(getConsoleWait())
+	}()
 }
 
 func dispatchHistory(id string) {
@@ -501,10 +510,21 @@ func printConsoleHelp() {
 	fmt.Printf("\n")
 }
 
-func printConsoleWait() {
-	fmt.Printf("%s%s", CONSOLE_PREFIX, CONSOLE_SEP)
+func getConsoleWait() string {
+	return fmt.Sprintf("%s%s", CONSOLE_PREFIX, CONSOLE_SEP)
 }
 
-func printConsoleInputPad() {
-	fmt.Printf("%s%s", strings.Repeat(" ", len(CONSOLE_PREFIX)), CONSOLE_SEP)
+func restoreTerminalAndExit(term *terminal.Terminal, oldState *terminal.State) {
+	if oldState != nil {
+		terminal.Restore(0, oldState)
+	}
+	if term != nil {
+		term.ReleaseFromStdInOut()
+	}
+	os.Exit(0)
+}
+
+func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int) {
+	// TODO
+	return nil, pos
 }
