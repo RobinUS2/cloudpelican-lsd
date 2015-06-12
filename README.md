@@ -15,3 +15,10 @@ mvn clean install
 java -jar java -jar ~/.m2/repository/nl/us2/cloudpelican/storm-processor/1.0-SNAPSHOT/storm-proceor-1.0-SNAPSHOT-jar-with-dependencies.jar -zookeeper=zookeeper1.domain.com:2181,zookeeper2.domain.com:2181,zookeeper3.domain.com:2181 -topic=my_logging -grep=this
 ```
 
+### Starting the CLI ###
+```
+cd cloudpelican-lsd/cli
+./build.sh # Uses go build to compile the binary
+./link_binary.sh # This will add a symlink to /usr/bin/cloudpelican for easy use
+cloudpelican
+```
