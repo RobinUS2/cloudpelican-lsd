@@ -47,3 +47,13 @@ cd cloudpelican-lsd/storm
 mvn clean install
 java -jar java -jar ~/.m2/repository/nl/us2/cloudpelican/storm-processor/1.0-SNAPSHOT/storm-proceor-1.0-SNAPSHOT-jar-with-dependencies.jar -zookeeper=zookeeper1.domain.com:2181,zookeeper2.domain.com:2181,zookeeper3.domain.com:2181 -topic=my_logging -grep=this
 ```
+
+# Authentication #
+The CLI talks with the Supervisor in order to communicate safely with the Storm topology.
+
+```
+$ cloudpelican> auth <username> <password>
+$ cloudpelican> connect http://<supervisor_hostname>:<port>/
+$ cloudpelican> ping
+Pong
+```
