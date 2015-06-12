@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
@@ -56,21 +55,6 @@ func main() {
 
 	// Load config
 	loadConf()
-
-	// Handle other signals
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for _ = range c {
-			// sig is a ^C, handle it
-			interrupted = true
-			consecutiveInterruptCount++
-			if consecutiveInterruptCount >= 2 {
-				fmt.Printf("Exiting\n")
-				restoreTerminalAndExit(term, oldState)
-			}
-		}
-	}()
 
 	// Startup commands
 	if len(startupCommands) > 0 {
@@ -118,22 +102,32 @@ func startConsole() {
 			restoreTerminalAndExit(term, oldState)
 		}
 		if err != nil && strings.Contains(err.Error(), "control-c break") {
-			restoreTerminalAndExit(term, oldState)
-		}
-
-		if err != nil {
-			fmt.Println("Error: ", err)
+			handleInterrupt()
 		} else {
-			input = strings.TrimSpace(input)
-			lowerStr := strings.ToLower(input)
-			splitLower := strings.Split(lowerStr, " ")
+			if err != nil {
+				fmt.Println("Error: ", err)
+			} else {
+				input = strings.TrimSpace(input)
+				lowerStr := strings.ToLower(input)
+				splitLower := strings.Split(lowerStr, " ")
 
-			// Semi colon?
-			if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
-				// Flush buffer
-				handleConsole(input)
+				// Semi colon?
+				if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
+					// Flush buffer
+					handleConsole(input)
+				}
 			}
 		}
+	}
+}
+
+func handleInterrupt() {
+	// sig is a ^C, handle it
+	interrupted = true
+	consecutiveInterruptCount++
+	if consecutiveInterruptCount >= 2 {
+		fmt.Printf("Exiting\n")
+		restoreTerminalAndExit(term, oldState)
 	}
 }
 
@@ -356,44 +350,48 @@ func executeSelect(input string) {
 	// Stream data
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
 	var resultCount int64 = 0
-outer:
-	for {
-		// Handle interrup
-		if interrupted {
-			interrupted = false
-			consecutiveInterruptCount = 0
-			fmt.Printf("Interrupted..\n")
-			if len(tmpFilterName) > 0 {
-				supervisorCon.RemoveFilter(tmpFilterName)
+	go func() {
+		fmt.Println()
+	outer:
+		for {
+			// Handle interrup
+			if interrupted {
+				interrupted = false
+				consecutiveInterruptCount = 0
+				fmt.Printf("Interrupted..\n")
+				if len(tmpFilterName) > 0 {
+					supervisorCon.RemoveFilter(tmpFilterName)
+				}
+				break
 			}
-			break
-		}
 
-		time.Sleep(200 * time.Millisecond) // @todo dynamic
-		data, respErr := supervisorCon._get(uri)
-		if respErr != nil {
-			if verbose {
-				fmt.Printf("Error while fetching results: %s", respErr)
+			time.Sleep(200 * time.Millisecond) // @todo dynamic
+			data, respErr := supervisorCon._get(uri)
+			if respErr != nil {
+				if verbose {
+					fmt.Printf("Error while fetching results: %s", respErr)
+				}
+				continue
 			}
-			continue
-		}
-		var res map[string]interface{}
-		jE := json.Unmarshal([]byte(data), &res)
-		if jE != nil {
-			if verbose {
-				fmt.Printf("Error while fetching results: %s", jE)
+			var res map[string]interface{}
+			jE := json.Unmarshal([]byte(data), &res)
+			if jE != nil {
+				if verbose {
+					fmt.Printf("Error while fetching results: %s", jE)
+				}
+				continue
 			}
-			continue
-		}
-		list := res["results"].([]interface{})
-		for _, elm := range list {
-			fmt.Printf("%s\n", elm)
-			resultCount++
-			if limit != -1 && resultCount >= limit {
-				break outer
+			list := res["results"].([]interface{})
+			for _, elm := range list {
+				fmt.Printf("%s\n", elm)
+				resultCount++
+				if limit != -1 && resultCount >= limit {
+					break outer
+				}
 			}
 		}
-	}
+		fmt.Printf(getConsoleWait())
+	}()
 }
 
 func dispatchHistory(id string) {
