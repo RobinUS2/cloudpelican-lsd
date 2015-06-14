@@ -520,6 +520,9 @@ func getStats(filterName string) {
 		return
 	}
 
+	// Get console width
+	stats.loadTerminalDimensions()
+
 	// Clear console
 	clearConsole()
 
