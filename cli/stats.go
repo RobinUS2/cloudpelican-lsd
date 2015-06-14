@@ -44,10 +44,16 @@ func (s *Statistics) loadTerminalDimensions() {
 func (s *Statistics) GetChart(filter *Filter) string {
 	maxHeight := s.terminalHeight - 4 // remove some for padding
 	maxWidth := int(math.Max(24, float64(s.terminalWidth)))
+
+	// Random data (primary is top, secondary is filled, e.g. errors)
 	data := make([]int32, 0)
+	dataSecondary := make([]int32, 0)
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 24; i++ {
-		data = append(data, rand.Int31n(100))
+		v := rand.Int31n(100)
+		data = append(data, v)
+		v2 := int32(math.Min(float64(v), float64(rand.Int31n(50))))
+		dataSecondary = append(dataSecondary, v2)
 	}
 
 	// Scan for min and max
@@ -61,9 +67,8 @@ func (s *Statistics) GetChart(filter *Filter) string {
 			maxVal = val
 		}
 	}
-	//log.Printf("min %d", minVal)
-	//log.Printf("max %d", maxVal)
-	//log.Printf("data %v", data)
+
+	// Dynamic column padding
 	s.colPad = int((maxWidth - len(data)) / len(data))
 
 	// Start to build chart (top to bottom)
@@ -84,13 +89,18 @@ func (s *Statistics) GetChart(filter *Filter) string {
 			} else {
 				// Data point
 				colVal := data[col]
+				secondaryColVal := dataSecondary[col]
 
 				// Normalize value (e.g. height max is 10, max value is 50, this value is 25, needs to be 5)
 				//normalizedColVal := int((float32(maxHeight) / float32(maxVal)) * float32(colVal))
 
 				// Print?
 				if colVal >= minLineVal {
-					buf.WriteString("o")
+					if secondaryColVal >= minLineVal {
+						buf.WriteString("*")
+					} else {
+						buf.WriteString("o")
+					}
 				} else {
 					buf.WriteString(" ")
 				}
