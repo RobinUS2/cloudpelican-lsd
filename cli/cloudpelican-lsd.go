@@ -38,6 +38,7 @@ var interrupted bool
 var startupCommands string
 var silent bool
 var allowAutoCreateFilter bool
+var stats *Statistics
 var term *terminal.Terminal
 var oldState *terminal.State
 var cmdFinishChan chan bool
@@ -59,6 +60,10 @@ func main() {
 	// Load config
 	loadConf()
 
+	// Stats
+	stats = newStatistics()
+
+	// Wait channel
 	cmdFinishChan = make(chan bool, 1)
 
 	// Startup commands
@@ -90,6 +95,7 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
 	CONSOLE_KEYWORDS_OPTS["tail"] = 2    // tail + filter name
 	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
+	CONSOLE_KEYWORDS_OPTS["stats"] = 2   // stats + filter name
 
 	// Console reader
 	term, _ = terminal.NewWithStdInOut()
@@ -156,9 +162,7 @@ func _handleConsole(input string) bool {
 	} else if inputLower == "quit" || inputLower == "exit" {
 		restoreTerminalAndExit(term, oldState)
 	} else if inputLower == "clear" {
-		c := exec.Command("clear")
-		c.Stdout = os.Stdout
-		c.Run()
+		clearConsole()
 	} else if inputLower == "save" {
 		save()
 	} else if inputLower == "ping" {
@@ -204,6 +208,14 @@ func _handleConsole(input string) bool {
 		}
 		executeSelect(fmt.Sprintf("select * from %s", split[1]))
 		return true
+	} else if strings.Index(inputLower, "stats ") == 0 {
+		split := strings.SplitN(input, "stats ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return false
+		}
+		getStats(split[1])
+		return false
 	} else if strings.Index(inputLower, "auth ") == 0 {
 		split := strings.Split(input, " ")
 		if len(split) != 3 {
@@ -501,9 +513,26 @@ func auth(usr string, pwd string) {
 	}
 }
 
+func getStats(filterName string) {
+	filter, filterE := supervisorCon.FilterByName(filterName)
+	if filterE != nil {
+		printConsoleError("Filter not found")
+		return
+	}
+	clearConsole()
+	fmt.Printf("\n")
+	fmt.Printf("%s", stats.GetChart(filter))
+}
+
 func connect(uri string) {
 	session["supervisor_uri"] = uri
 	_connect(true)
+}
+
+func clearConsole() {
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
 }
 
 func _connect(interactive bool) {
