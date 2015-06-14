@@ -519,7 +519,11 @@ func getStats(filterName string) {
 		printConsoleError("Filter not found")
 		return
 	}
+
+	// Clear console
 	clearConsole()
+
+	// Print chart
 	fmt.Printf("\n")
 	fmt.Printf("%s", stats.GetChart(filter))
 }

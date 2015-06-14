@@ -8,19 +8,42 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Statistics struct {
-	verticalSep   string
-	horizontalSep string
-	colPad        int
+	verticalSep    string
+	horizontalSep  string
+	colPad         int
+	terminalWidth  int
+	terminalHeight int
+}
+
+func (s *Statistics) loadTerminalDimensions() {
+	cmd := exec.Command("stty", "size")
+	cmd.Stdin = os.Stdin
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	str := strings.TrimSpace(string(out))
+	split := strings.Split(str, " ")
+	height, _ := strconv.ParseInt(split[0], 10, 0)
+	width, _ := strconv.ParseInt(split[1], 10, 0)
+	s.terminalHeight = int(height)
+	s.terminalWidth = int(width)
+	if verbose {
+		log.Println("Terminal dimension %dx%d (WxH)", s.terminalWidth, s.terminalHeight)
+	}
 }
 
 func (s *Statistics) GetChart(filter *Filter) string {
-	maxHeight := 20
-	maxWidth := 24
+	maxHeight := s.terminalHeight - 4 // remove some for padding
+	maxWidth := int(math.Max(24, float64(s.terminalWidth)))
 	data := make([]int32, 0)
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < 24; i++ {
@@ -38,9 +61,10 @@ func (s *Statistics) GetChart(filter *Filter) string {
 			maxVal = val
 		}
 	}
-	log.Printf("min %d", minVal)
-	log.Printf("max %d", maxVal)
-	log.Printf("data %v", data)
+	//log.Printf("min %d", minVal)
+	//log.Printf("max %d", maxVal)
+	//log.Printf("data %v", data)
+	s.colPad = int((maxWidth - len(data)) / len(data))
 
 	// Start to build chart (top to bottom)
 	var buf bytes.Buffer
@@ -49,7 +73,7 @@ func (s *Statistics) GetChart(filter *Filter) string {
 		minLineVal := int32(float32(line) / (float32(maxHeight) / float32(maxVal)))
 
 		// Iterate columns
-		for col := 0; col < maxWidth; col++ {
+		for col := 0; col < len(data); col++ {
 			// Determine what to write
 			if col == 0 && line != 0 {
 				// Left axis
@@ -87,9 +111,11 @@ func (s *Statistics) GetChart(filter *Filter) string {
 }
 
 func newStatistics() *Statistics {
-	return &Statistics{
+	s := &Statistics{
 		verticalSep:   "|",
 		horizontalSep: "_",
 		colPad:        3,
 	}
+	s.loadTerminalDimensions()
+	return s
 }
