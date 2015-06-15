@@ -253,6 +253,8 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 	wg.Wait()
 	if elm != nil && stats != nil {
 		elm.Stats = stats
+	} else {
+		elm.Stats = newFilterStats()
 	}
 	return elm
 }
