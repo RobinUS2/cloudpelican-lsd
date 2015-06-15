@@ -646,6 +646,21 @@ func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int)
 		}
 	}
 
+	// Autocomplete filter names
+	if strings.Index(lineStr, "stats") == 0 || strings.Index(lineStr, "tail") == 0 {
+		split := strings.SplitN(lineStr, " ", 2)
+		if len(split) == 2 {
+			filters, _ := supervisorCon.Filters()
+			if filters != nil {
+				for _, filter := range filters {
+					if strings.Index(filter.Name, split[1]) == 0 {
+						opts = append(opts, fmt.Sprintf("%s %s", split[0], filter.Name))
+					}
+				}
+			}
+		}
+	}
+
 	// Only suggest if we have one option left
 	if len(opts) == 1 {
 		var opt = opts[0]
