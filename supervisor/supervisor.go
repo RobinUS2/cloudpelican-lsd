@@ -172,9 +172,13 @@ func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 		return
 	}
 	stats := filter.GetStats()
-	m := make(map[int]map[int]int) // metricid => timebucket => value
+	m := make(map[string]map[string]int64) // metricid => timebucket => value
 	for metricId, metric := range stats.metrics {
-		m[metricId] = metric.data
+		ms := fmt.Sprintf("%d", metricId)
+		m[ms] = make(map[string]int64)
+		for ts, val := range metric.data {
+			m[ms][fmt.Sprintf("%d", ts)] = val
+		}
 	}
 	jresp.Set("stats", m)
 	jresp.OK()
@@ -247,7 +251,7 @@ func PutStatsFilters(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	}
 
 	// JSON decode
-	var data map[string]int
+	var data map[string]int64
 	jsonErr := json.Unmarshal(bodyBytes, &data)
 	if jsonErr != nil {
 		jresp.Error(fmt.Sprintf("Invalid request JSON: %s", jsonErr))
@@ -258,7 +262,7 @@ func PutStatsFilters(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	// Store results
 	var filterId string
 	var metric int
-	var timeBucket int
+	var timeBucket int64
 	var updates int // Amount of acknowledged updates
 	for k, count := range data {
 		// Reset vars
@@ -287,12 +291,12 @@ func PutStatsFilters(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 				metric = int(i)
 			} else if kv[0] == "b" {
 				// Time bucket
-				i, e := strconv.ParseInt(kv[1], 10, 0)
+				i, e := strconv.ParseInt(kv[1], 10, 64)
 				if e != nil {
 					log.Println("Invalid integer %s in PutStatsFilters", kv[1])
 					continue
 				}
-				timeBucket = int(i)
+				timeBucket = int64(i)
 			}
 		}
 
