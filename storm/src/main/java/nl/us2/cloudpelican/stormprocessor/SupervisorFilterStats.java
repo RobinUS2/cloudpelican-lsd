@@ -30,4 +30,16 @@ public class SupervisorFilterStats {
     public long getBucket() {
         return bucket;
     }
+
+    public String getFilterId() {
+        return filterId;
+    }
+
+    public String toKey() {
+        return SupervisorFilterStats.getKey(getFilterId(), getMetric(), getBucket());
+    }
+
+    public static String getKey(String filterId, int metric, long bucket) {
+        return "f_" + filterId + "_m" + metric +"_b" + bucket;
+    }
 }

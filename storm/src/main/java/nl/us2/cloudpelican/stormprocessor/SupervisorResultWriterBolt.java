@@ -65,7 +65,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
                 HttpClient client = HttpClientBuilder.create().build();
 
                 String url = settings.get("supervisor_host") + "filter/" + kv.getKey() + "/result";
-                LOG.info(url);
+                LOG.debug(url);
                 HttpPut put = new HttpPut(url);
                 StringBuilder sb = new StringBuilder();
                 for (String line : kv.getValue()) {

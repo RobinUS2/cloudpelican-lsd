@@ -8,10 +8,12 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/RobinUS2/golang-jresp"
 	"github.com/julienschmidt/httprouter"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -54,6 +56,7 @@ func main() {
 	router.POST("/filter", PostFilter)                // Create new filter
 	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
 	router.PUT("/filter/:id/result", PutFilterResult) // Store new results into a filter
+	router.PUT("/filter/stats", PutFilterStats)       // Store new statistics around filters
 	router.GET("/filter", GetFilter)                  // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)        // Delete a filter
 
@@ -196,6 +199,36 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	jresp := jresp.NewJsonResp()
 	filters := filterManager.GetFilters()
 	jresp.Set("filters", filters)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func PutFilterStats(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+
+	// Read body
+	bodyBytes, bodyErr := ioutil.ReadAll(r.Body)
+	if bodyErr != nil {
+		jresp.Error("Invalid request body")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	log.Println("%s", string(bodyBytes))
+
+	// JSON decode
+	var data map[string]string
+	jsonErr := json.Unmarshal(bodyBytes, &data)
+	if jsonErr != nil {
+		jresp.Error(fmt.Sprintf("Invalid request JSON: %s", jsonErr))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	log.Println("%v", data)
+
+	// OK
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }

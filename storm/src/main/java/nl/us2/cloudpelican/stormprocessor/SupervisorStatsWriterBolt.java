@@ -10,6 +10,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Tuple;
+import com.google.gson.Gson;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
@@ -20,10 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  *
@@ -61,32 +59,37 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
     }
 
     protected void _flush() {
+        HashMap<String, Long> pushMap = new HashMap<String, Long>();
         for (Map.Entry<String, SupervisorFilterStats> kv : resultAggregator.entrySet()) {
-            System.out.println(kv.getKey() + " = " + kv.getValue().getCount());
-            /*
-            try {
-                HttpClient client = HttpClientBuilder.create().build();
+            String k = kv.getValue().toKey();
+            long c = kv.getValue().getCount();
+            LOG.debug(k + " = " + c);
+            pushMap.put(k, c);
+        }
+        if (pushMap.size()  < 1) {
+            return;
+        }
+        try {
+            HttpClient client = HttpClientBuilder.create().build();
 
-                String url = settings.get("supervisor_host") + "filter/" + kv.getKey() + "/stats";
-                LOG.info(url);
-                HttpPut put = new HttpPut(url);
-                StringBuilder sb = new StringBuilder();
-                for (String line : kv.getValue()) {
-                    sb.append(line).append("\n");
-                }
-                StringEntity entity = new StringEntity(sb.toString());
-                put.setEntity(entity);
-                String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-                LOG.debug(token);
-                put.setHeader("Authorization", "Basic " + token);
-                HttpResponse resp = client.execute(put);
-                int status = resp.getStatusLine().getStatusCode();
-                if (status >= 400) {
-                    throw new Exception("Invalid status " + status);
-                }
-            } catch (Exception e) {
-                LOG.error("Failed to write data to supervisor", e);
-            }*/
+            String url = settings.get("supervisor_host") + "filter/stats";
+            LOG.debug(url);
+            HttpPut put = new HttpPut(url);
+            Gson gson = new Gson();
+            String json = gson.toJson(pushMap);
+            LOG.debug(json);
+            StringEntity entity = new StringEntity(json);
+            put.setEntity(entity);
+            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
+            LOG.debug(token);
+            put.setHeader("Authorization", "Basic " + token);
+            HttpResponse resp = client.execute(put);
+            int status = resp.getStatusLine().getStatusCode();
+            if (status >= 400) {
+                throw new Exception("Invalid status " + status);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to write statistics to supervisor", e);
         }
         resultAggregator.clear();
     }
@@ -108,7 +111,7 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
         Date d = new Date();
         long ts = d.getTime() / 1000L; // UNIX TS
         long bucket = ts - (ts % 60); // Minutely buckets
-        String k = "f_" + filterId + "_m" + metric +"_b" + bucket;
+        String k = SupervisorFilterStats.getKey(filterId, metric, increment);
 
 
         // Append in-memory
