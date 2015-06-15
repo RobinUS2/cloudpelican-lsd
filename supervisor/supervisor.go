@@ -56,7 +56,7 @@ func main() {
 	router.POST("/filter", PostFilter)                // Create new filter
 	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
 	router.PUT("/filter/:id/result", PutFilterResult) // Store new results into a filter
-	router.PUT("/stats/filters", PutFilterStats)      // Store new statistics around filters
+	router.PUT("/stats/filters", PutStatsFilters)     // Store new statistics around filters
 	router.GET("/filter", GetFilter)                  // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)        // Delete a filter
 
@@ -203,7 +203,7 @@ func GetFilter(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
-func PutFilterStats(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func PutStatsFilters(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
@@ -219,7 +219,7 @@ func PutFilterStats(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	log.Println("%s", string(bodyBytes))
 
 	// JSON decode
-	var data map[string]string
+	var data map[string]int64
 	jsonErr := json.Unmarshal(bodyBytes, &data)
 	if jsonErr != nil {
 		jresp.Error(fmt.Sprintf("Invalid request JSON: %s", jsonErr))
