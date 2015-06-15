@@ -520,15 +520,32 @@ func getStats(filterName string) {
 		return
 	}
 
+	// Load
+	data, statsE := filter.GetStats(3600)
+	if statsE != nil {
+		printConsoleError(fmt.Sprintf("%s", statsE))
+		return
+	}
+	if verbose {
+		log.Printf("Stats %v", data)
+	}
+
 	// Get console width
 	stats.loadTerminalDimensions()
 
 	// Clear console
 	clearConsole()
 
+	// Render chart
+	chart, chartE := stats.RenderChart(filter, data)
+	if chartE != nil {
+		printConsoleError(fmt.Sprintf("%s", chartE))
+		return
+	}
+
 	// Print chart
 	fmt.Printf("\n")
-	fmt.Printf("%s", stats.GetChart(filter))
+	fmt.Printf("%s", chart)
 }
 
 func connect(uri string) {

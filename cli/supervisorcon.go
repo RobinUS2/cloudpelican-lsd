@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -20,6 +21,43 @@ type Filter struct {
 	Name       string `json:"name"`
 	ClientHost string `json:"client_host"`
 	Id         string `json:"id"`
+}
+
+// Returns a map of metricId => timestamp => count
+func (f *Filter) GetStats(rollup int64) (map[int]map[int64]int64, error) {
+	// Request
+	uri := fmt.Sprintf("filter/%s/stats", f.Id)
+	data, err := supervisorCon._get(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse JSON
+	var d map[string]interface{}
+	je := json.Unmarshal([]byte(data), &d)
+	if je != nil {
+		return nil, je
+	}
+
+	// To map + rollup
+	var res map[int]map[int64]int64 = make(map[int]map[int64]int64)
+	for metricId, data := range d["stats"].(map[string]interface{}) {
+		i, _ := strconv.ParseInt(metricId, 10, 0)
+		metric := int(i)
+		if res[metric] == nil {
+			res[metric] = make(map[int64]int64)
+		}
+		for tsStr, val := range data.(map[string]interface{}) {
+			tsI, _ := strconv.ParseInt(tsStr, 10, 64)
+			ts := int64(tsI)
+			bucket := ts
+			if rollup != -1 {
+				bucket = ts - (ts % rollup)
+			}
+			res[metric][bucket] += int64(val.(float64))
+		}
+	}
+	return res, nil
 }
 
 func (s *SupervisorCon) Connect() bool {
