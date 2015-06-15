@@ -52,6 +52,7 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	data := make([]int64, 0)
 	dataSecondary := make([]int64, 0)
 	metricId := 1
+	errorMetricId := 2
 	if inputData[metricId] == nil || len(inputData[metricId]) < 1 {
 		return "", errors.New("Metrics not available for this filter")
 	}
@@ -65,7 +66,13 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	for _, k := range keys {
 		val := inputData[metricId][int64(k)]
 		data = append(data, val)
-		dataSecondary = append(dataSecondary, 0) // No error data yet
+
+		// Errors
+		var errorVal int64 = 0
+		if inputData[errorMetricId] != nil {
+			errorVal = inputData[errorMetricId][int64(k)]
+		}
+		dataSecondary = append(dataSecondary, errorVal)
 	}
 
 	// Width and height for chart
