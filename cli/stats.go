@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"math"
 	"math/rand"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mgutz/ansi"
 )
 
 type Statistics struct {
@@ -71,6 +74,11 @@ func (s *Statistics) GetChart(filter *Filter) string {
 	// Dynamic column padding
 	s.colPad = int((maxWidth - len(data)) / len(data))
 
+	// Color codes
+	colorRed := ansi.ColorCode("red")
+	colorGreen := ansi.ColorCode("green")
+	resetColor := ansi.ColorCode("reset")
+
 	// Start to build chart (top to bottom)
 	var buf bytes.Buffer
 	for line := maxHeight; line >= 0; line-- {
@@ -97,9 +105,9 @@ func (s *Statistics) GetChart(filter *Filter) string {
 				// Print?
 				if colVal >= minLineVal {
 					if secondaryColVal >= minLineVal {
-						buf.WriteString("*")
+						buf.WriteString(fmt.Sprintf("%s%s%s", colorRed, "*", resetColor))
 					} else {
-						buf.WriteString("o")
+						buf.WriteString(fmt.Sprintf("%s%s%s", colorGreen, "o", resetColor))
 					}
 				} else {
 					buf.WriteString(" ")
