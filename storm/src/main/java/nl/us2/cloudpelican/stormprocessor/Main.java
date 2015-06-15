@@ -23,6 +23,7 @@ public class Main {
     public static String MATCH_BOLT = "match_bolt";
     public static String SUPERVISOR_RESULT_WRITER = "supervisor_result_writer";
     public static String SUPERVISOR_STATS_WRITER = "supervisor_stats_writer";
+    public static String SUPERVISOR_ERROR_STATS_WRITER = "supervisor_error_stats_writer";
     public static String ERROR_CLASSIFIER_BOLT = "error_classifier";
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
@@ -83,7 +84,7 @@ public class Main {
 
         // Supervisor stats writer bolt
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
-        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
 
         // Debug on for testing
         Config conf = new Config();
