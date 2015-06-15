@@ -4,7 +4,9 @@
 package main
 
 import (
+	"bytes"
 	"code.google.com/p/go-uuid/uuid"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
@@ -13,18 +15,19 @@ import (
 )
 
 type FilterManager struct {
-	db            *bolt.DB
-	filterTable   string
-	filterResults map[string][]string
-	filterStats   map[string]*FilterStats
+	db               *bolt.DB
+	filterTable      string
+	filterResults    map[string][]string
+	filterStatsTable string
+	filterStats      map[string]*FilterStats
 }
 
 type FilterStats struct {
-	metrics map[int]*FilterTimeseries `json:"metrics"`
+	Metrics map[int]*FilterTimeseries `json:"metrics"`
 }
 
 type FilterTimeseries struct {
-	data map[int64]int64 `json:"data"` // ts => count
+	Data map[int64]int64 `json:"data"` // ts => count
 }
 
 type Filter struct {
@@ -32,7 +35,7 @@ type Filter struct {
 	Name       string `json:"name"`
 	ClientHost string `json:"client_host"`
 	Id         string `json:"id"`
-	stats      *FilterStats
+	Stats      *FilterStats
 	//Results    []string `json:"results"`
 	resultsMux sync.RWMutex
 	statsMux   sync.RWMutex
@@ -82,20 +85,42 @@ func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
 	f.statsMux.Lock()
 
 	// Stats wrapper
-	if f.stats == nil {
-		f.stats = newFilterStats()
+	if f.Stats == nil {
+		f.Stats = newFilterStats()
 	}
 
 	// Metric wrapper?
-	if f.stats.metrics[metric] == nil {
-		f.stats.metrics[metric] = newFilterTimeseries()
+	if f.Stats.Metrics[metric] == nil {
+		f.Stats.Metrics[metric] = newFilterTimeseries()
 	}
 
 	// Store
-	f.stats.metrics[metric].data[timeBucket] += count
+	f.Stats.Metrics[metric].Data[timeBucket] += count
 
 	// Persist in filter manager
-	filterManager.filterStats[f.Id] = f.stats
+	filterManager.filterStats[f.Id] = f.Stats
+
+	// Encoding
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	enc.Encode(f.Stats)
+
+	// Write to database
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var err error = nil
+	filterManager.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(filterManager.filterStatsTable))
+		err = b.Put([]byte(f.Id), buf.Bytes())
+		if err == nil {
+			if verbose {
+				log.Printf("Persisted filter %s timeseries", f.Id)
+			}
+		}
+		wg.Done()
+		return err
+	})
+	wg.Wait()
 
 	f.statsMux.Unlock()
 	return true
@@ -104,7 +129,7 @@ func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
 func (f *Filter) GetStats() *FilterStats {
 	f.statsMux.RLock()
 	defer f.statsMux.RUnlock()
-	return f.stats
+	return f.Stats
 }
 
 // @todo Support multiple adapters for storage of results, currently only in memory
@@ -160,6 +185,15 @@ func (fm *FilterManager) Open() {
 		wg.Done()
 		return nil
 	})
+	wg.Add(1)
+	fm.db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterStatsTable))
+		if err != nil {
+			log.Fatal(fmt.Errorf("create bucket: %s", err))
+		}
+		wg.Done()
+		return nil
+	})
 
 	// Wait until buckets are ready
 	wg.Wait()
@@ -191,15 +225,35 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 	var wg sync.WaitGroup
 	var elm *Filter = nil
 	wg.Add(1)
+	// Load filter
 	fm.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(fm.filterTable))
 		res := b.Get([]byte(id))
 		elm = filterFromJson(res)
-		elm.stats = filterManager.filterStats[elm.Id]
+		wg.Done()
+		return nil
+	})
+	// Load filter stats
+	wg.Add(1)
+	var stats *FilterStats
+	fm.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterStatsTable))
+		res := b.Get([]byte(id))
+		var buf bytes.Buffer
+		buf.Write(res)
+		dec := gob.NewDecoder(&buf)
+		de := dec.Decode(&stats)
+		if de != nil {
+			stats = nil
+			log.Printf("Failed to load timeseries %s", de)
+		}
 		wg.Done()
 		return nil
 	})
 	wg.Wait()
+	if elm != nil && stats != nil {
+		elm.Stats = stats
+	}
 	return elm
 }
 
@@ -263,9 +317,10 @@ func filterFromJson(b []byte) *Filter {
 
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:   "filters",
-		filterResults: make(map[string][]string),
-		filterStats:   make(map[string]*FilterStats),
+		filterTable:      "filters",
+		filterStatsTable: "filter_stats",
+		filterResults:    make(map[string][]string),
+		filterStats:      make(map[string]*FilterStats),
 	}
 	fm.Open()
 	return fm
@@ -273,18 +328,18 @@ func NewFilterManager() *FilterManager {
 
 func newFilter() *Filter {
 	return &Filter{
-		stats: newFilterStats(),
+		Stats: newFilterStats(),
 	}
 }
 
 func newFilterStats() *FilterStats {
 	return &FilterStats{
-		metrics: make(map[int]*FilterTimeseries),
+		Metrics: make(map[int]*FilterTimeseries),
 	}
 }
 
 func newFilterTimeseries() *FilterTimeseries {
 	return &FilterTimeseries{
-		data: make(map[int64]int64),
+		Data: make(map[int64]int64),
 	}
 }

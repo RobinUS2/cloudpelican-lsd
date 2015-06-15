@@ -173,10 +173,10 @@ func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	}
 	stats := filter.GetStats()
 	m := make(map[string]map[string]int64) // metricid => timebucket => value
-	for metricId, metric := range stats.metrics {
+	for metricId, metric := range stats.Metrics {
 		ms := fmt.Sprintf("%d", metricId)
 		m[ms] = make(map[string]int64)
-		for ts, val := range metric.data {
+		for ts, val := range metric.Data {
 			m[ms][fmt.Sprintf("%d", ts)] = val
 		}
 	}
