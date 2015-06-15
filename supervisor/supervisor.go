@@ -171,7 +171,7 @@ func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
-	jresp.Set("stats", filter.GetStats())
+	jresp.Set("stats", *filter.GetStats())
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
