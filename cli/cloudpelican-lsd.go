@@ -521,7 +521,7 @@ func getStats(filterName string) {
 	}
 
 	// Load
-	data, statsE := filter.GetStats(3600)
+	data, statsE := filter.GetStats(60) // @todo dynamic, default to hour?
 	if statsE != nil {
 		printConsoleError(fmt.Sprintf("%s", statsE))
 		return
