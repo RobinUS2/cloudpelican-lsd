@@ -16,6 +16,7 @@ type FilterManager struct {
 	db            *bolt.DB
 	filterTable   string
 	filterResults map[string][]string
+	filterStats   map[string]*FilterStats
 }
 
 type FilterStats struct {
@@ -92,6 +93,9 @@ func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
 
 	// Store
 	f.stats.metrics[metric].data[timeBucket] += count
+
+	// Persist in filter manager
+	filterManager.filterStats[f.Id] = f.stats
 
 	f.statsMux.Unlock()
 	return true
@@ -201,6 +205,7 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 		b := tx.Bucket([]byte(fm.filterTable))
 		res := b.Get([]byte(id))
 		elm = filterFromJson(res)
+		elm.stats = filterManager.filterStats[elm.Id]
 		wg.Done()
 		return nil
 	})
