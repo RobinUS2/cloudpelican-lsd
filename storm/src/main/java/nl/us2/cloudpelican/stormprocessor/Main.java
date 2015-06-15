@@ -55,6 +55,9 @@ public class Main {
                 }
             }
         }
+        if (!settings.containsKey("kafka_consumer_id")) {
+            settings.put("kafka_consumer_id", "default_cloudpelican_lsd_consumer");
+        }
         LOG.info(settings.toString());
 
         // Topology
@@ -67,7 +70,7 @@ public class Main {
         // Read from kafka
 
         BrokerHosts hosts = new ZkHosts(settings.get("zookeeper_nodes"));
-        SpoutConfig spoutConfig = new SpoutConfig(hosts, settings.get("kafka_topic"), "/" + settings.get("kafka_topic"), UUID.randomUUID().toString());
+        SpoutConfig spoutConfig = new SpoutConfig(hosts, settings.get("kafka_topic"), "/" + settings.get("kafka_topic"), settings.get("kafka_consumer_id"));
         spoutConfig.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
         KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
