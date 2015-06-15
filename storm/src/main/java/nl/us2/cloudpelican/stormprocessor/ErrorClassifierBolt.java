@@ -75,17 +75,17 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         // Train classifier
         if (errorWordMatch) {
             // Likely error
-            LOG.info("Train likely error: " + msg);
+            LOG.debug("Train likely error: " + msg);
             classifiers.get(filterId).learn(CLASSIFY_ERROR, msgTokens);
         } else {
             // Likely regular message
-            LOG.info("Train likely regular: " + msg);
+            LOG.debug("Train likely regular: " + msg);
             classifiers.get(filterId).learn(CLASSIFY_REGULAR, msgTokens);
         }
 
         // Match?
         if (classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
-            LOG.info("Classified as error: " + msg);
+            LOG.debug("Classified as error: " + msg);
             _collector.emit("error_stats", new Values(filterId, MetricsEnum.ERRROR.getMask(), 1L)); // Counters
         }
         _collector.ack(tuple);
