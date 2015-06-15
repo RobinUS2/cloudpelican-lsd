@@ -9,22 +9,13 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
-import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.storm.http.HttpEntity;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
-import org.apache.storm.http.client.methods.HttpGet;
 import org.apache.storm.http.client.methods.HttpPut;
 import org.apache.storm.http.entity.StringEntity;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
-import org.apache.storm.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
@@ -32,24 +23,20 @@ import storm.starter.util.TupleHelpers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
-import java.util.regex.Matcher;
-
-import static backtype.storm.utils.Utils.DEFAULT_STREAM_ID;
 
 /**
  *
  * @author robin
  */
-public class ResultSupervisorWriterBolt extends BaseRichBolt {
+public class SupervisorResultWriterBolt extends BaseRichBolt {
 
     OutputCollector _collector;
     HashMap<String, ArrayList<String>> resultAggregator;
     private HashMap<String, String> settings;
 
-    private static final Logger LOG = LoggerFactory.getLogger(ResultSupervisorWriterBolt.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SupervisorResultWriterBolt.class);
 
-    public ResultSupervisorWriterBolt(HashMap<String, String> settings) {
+    public SupervisorResultWriterBolt(HashMap<String, String> settings) {
         super();
         this.settings = settings;
     }

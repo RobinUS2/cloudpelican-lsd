@@ -163,7 +163,8 @@ public class MatchBolt extends BaseRichBolt {
             boolean b = m.find();
             if (b) {
                 // Emit match
-                _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg));
+                _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg)); // Message
+                _collector.emit("match_stats", new Values(filter.Id(), 1, 1L)); // Counters
             }
         }
         // No ack, is handled in outer
@@ -171,5 +172,6 @@ public class MatchBolt extends BaseRichBolt {
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("filter_id", "msg"));
+        declarer.declareStream("match_stats", new Fields("filter_id", "metric", "increment"));
     }
 }
