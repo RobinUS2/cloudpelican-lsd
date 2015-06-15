@@ -142,15 +142,6 @@ func (f *Filter) AddResults(res []string) bool {
 	return true
 }
 
-func NewFilterManager() *FilterManager {
-	fm := &FilterManager{
-		filterTable:   "filters",
-		filterResults: make(map[string][]string),
-	}
-	fm.Open()
-	return fm
-}
-
 func (fm *FilterManager) Open() {
 	// Open DB
 	db, err := bolt.Open(dbFile, 0600, nil)
@@ -269,6 +260,16 @@ func filterFromJson(b []byte) *Filter {
 		return nil
 	}
 	return f
+}
+
+func NewFilterManager() *FilterManager {
+	fm := &FilterManager{
+		filterTable:   "filters",
+		filterResults: make(map[string][]string),
+		filterStats:   make(map[string]*FilterStats),
+	}
+	fm.Open()
+	return fm
 }
 
 func newFilter() *Filter {
