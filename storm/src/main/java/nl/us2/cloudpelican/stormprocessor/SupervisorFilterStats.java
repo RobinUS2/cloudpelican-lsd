@@ -40,6 +40,6 @@ public class SupervisorFilterStats {
     }
 
     public static String getKey(String filterId, int metric, long bucket) {
-        return "f_" + filterId + "_m" + metric +"_b" + bucket;
+        return "f=" + filterId + "_m=" + metric +"_b=" + bucket;
     }
 }

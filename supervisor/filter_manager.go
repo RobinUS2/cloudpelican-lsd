@@ -18,13 +18,23 @@ type FilterManager struct {
 	filterResults map[string][]string
 }
 
+type FilterStats struct {
+	metrics map[int]*FilterTimeseries `json:"metrics"`
+}
+
+type FilterTimeseries struct {
+	data map[int64]int64 `json:"data"` // ts => count
+}
+
 type Filter struct {
 	Regex      string `json:"regex"`
 	Name       string `json:"name"`
 	ClientHost string `json:"client_host"`
 	Id         string `json:"id"`
+	stats      *FilterStats
 	//Results    []string `json:"results"`
 	resultsMux sync.RWMutex
+	statsMux   sync.RWMutex
 }
 
 func (f *Filter) Results() []string {
@@ -66,6 +76,34 @@ func (f *Filter) Save() bool {
 	return res
 }
 
+// @todo Support multiple adapters for storage of statistics, currently only in memory
+func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
+	f.statsMux.Lock()
+
+	// Stats wrapper
+	if f.stats == nil {
+		f.stats = newFilterStats()
+	}
+
+	// Metric wrapper?
+	if f.stats.metrics[metric] == nil {
+		f.stats.metrics[metric] = newFilterTimeseries()
+	}
+
+	// Store
+	f.stats.metrics[metric].data[timeBucket] += count
+
+	f.statsMux.Unlock()
+	return true
+}
+
+func (f *Filter) GetStats() *FilterStats {
+	f.statsMux.RLock()
+	defer f.statsMux.RUnlock()
+	return f.stats
+}
+
+// @todo Support multiple adapters for storage of results, currently only in memory
 func (f *Filter) AddResults(res []string) bool {
 	f.resultsMux.Lock()
 
@@ -229,4 +267,12 @@ func filterFromJson(b []byte) *Filter {
 
 func newFilter() *Filter {
 	return &Filter{}
+}
+
+func newFilterStats() *FilterStats {
+	return &FilterStats{}
+}
+
+func newFilterTimeseries() *FilterTimeseries {
+	return &FilterTimeseries{}
 }
