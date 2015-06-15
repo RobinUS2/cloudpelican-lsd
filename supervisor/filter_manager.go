@@ -102,10 +102,7 @@ func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
 }
 
 func (f *Filter) GetStats() *FilterStats {
-	f.statsMux.RLock()
-	defer f.statsMux.RUnlock()
-	log.Printf("%v", f.stats)
-	return f.stats
+	return filterManager.filterStats[f.Id]
 }
 
 // @todo Support multiple adapters for storage of results, currently only in memory
