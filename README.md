@@ -16,7 +16,7 @@ Tail all log files non-interactively:
 `cloudpelican -e "tail stream:default"`
 
 Console charts
-![alt tag](https://raw.github.com/RobinUS2/cloudpelican-lsd/master/docs/console_charts.png)
+![alt tag](https://raw.github.com/RobinUS2/cloudpelican-lsd/master/docs/console_chart.png)
 
 # Building #
 In order to use Cloudpelican LSD you need clone this repository, install a few basic tools and follow the instructions below. All Java source code has to be compiled with JDK 1.8
