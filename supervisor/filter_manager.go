@@ -23,19 +23,19 @@ type FilterManager struct {
 }
 
 type FilterStats struct {
-	Metrics map[int]*FilterTimeseries `json:"metrics"`
+	Metrics map[int]*FilterTimeseries `json:"-"`
 }
 
 type FilterTimeseries struct {
-	Data map[int64]int64 `json:"data"` // ts => count
+	Data map[int64]int64 `json:"-"`
 }
 
 type Filter struct {
-	Regex      string `json:"regex"`
-	Name       string `json:"name"`
-	ClientHost string `json:"client_host"`
-	Id         string `json:"id"`
-	Stats      *FilterStats
+	Regex      string       `json:"regex"`
+	Name       string       `json:"name"`
+	ClientHost string       `json:"client_host"`
+	Id         string       `json:"id"`
+	Stats      *FilterStats `json:"-"`
 	//Results    []string `json:"results"`
 	resultsMux sync.RWMutex
 	statsMux   sync.RWMutex
