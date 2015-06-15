@@ -270,9 +270,13 @@ func newFilter() *Filter {
 }
 
 func newFilterStats() *FilterStats {
-	return &FilterStats{}
+	return &FilterStats{
+		metrics: make(map[int]*FilterTimeseries),
+	}
 }
 
 func newFilterTimeseries() *FilterTimeseries {
-	return &FilterTimeseries{}
+	return &FilterTimeseries{
+		data: make(map[int64]int64),
+	}
 }
