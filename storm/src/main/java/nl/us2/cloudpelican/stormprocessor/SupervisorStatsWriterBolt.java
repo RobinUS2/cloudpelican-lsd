@@ -72,7 +72,7 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
         try {
             HttpClient client = HttpClientBuilder.create().build();
 
-            String url = settings.get("supervisor_host") + "filter/stats";
+            String url = settings.get("supervisor_host") + "stats/filters";
             LOG.debug(url);
             HttpPut put = new HttpPut(url);
             Gson gson = new Gson();
