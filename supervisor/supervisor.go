@@ -171,7 +171,15 @@ func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
-	jresp.Set("stats", *filter.GetStats())
+	stats := filter.GetStats()
+	m := make(map[int]map[int64]int64) // metricid => timebucket => value
+	for metricId, metric := range stats.metrics {
+		if m[metricId] == nil {
+			m[metricId] = make(map[int64]int64)
+		}
+		log.Printf("%d %v", metricId, *metric)
+	}
+	jresp.Set("stats", m)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }
