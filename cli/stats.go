@@ -76,7 +76,7 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 		dataWidth = len(data)
 		// @todo Compress data (merge data points and get sums in order to fit in screen)
 	}
-	maxHeight := s.terminalHeight - 4 // remove some for padding
+	maxHeight := int(math.Min(float64(20), float64(s.terminalHeight-4))) // remove some for padding
 	maxWidth := int(math.Max(float64(dataWidth), float64(s.terminalWidth)))
 
 	// Scan for min and max

@@ -578,6 +578,7 @@ func printConsoleHelp() {
 	fmt.Printf("show filters\t\t\tDisplay list of filters configured\n")
 	fmt.Printf("select\t\t\t\tExecute SQL-like queries, example: select * from <filter_name>;\n")
 	fmt.Printf("tail <filter>\t\t\tTail stream of messages for a specific filter name\n")
+	fmt.Printf("stats <filter>\t\t\tShow matching rate for a specific filter name\n")
 	fmt.Printf("create filter\t\t\tCreate a new filter, example: create filter <filter_name> as '<regex>';\n")
 	fmt.Printf("drop filter\t\t\tRemove a filter, example: drop filter <filter_name>;\n")
 	fmt.Printf("clear\t\t\t\tClears console\n")
