@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type SupervisorCon struct {
@@ -77,9 +78,11 @@ func (s *SupervisorCon) Connect() bool {
 }
 
 func (s *SupervisorCon) Ping() {
+	start := time.Now()
 	_, err := s._get("ping")
 	if err == nil {
-		fmt.Printf("Pong\n")
+		duration := time.Now().Sub(start)
+		fmt.Printf("Pong, took %s\n", duration.String())
 	}
 }
 
