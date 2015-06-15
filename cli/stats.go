@@ -24,6 +24,9 @@ type Statistics struct {
 	colPad         int
 	terminalWidth  int
 	terminalHeight int
+	colorRed       string
+	colorGreen     string
+	colorReset     string
 }
 
 func (s *Statistics) loadTerminalDimensions() {
@@ -92,9 +95,8 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	s.colPad = int((maxWidth - len(data)) / len(data))
 
 	// Color codes
-	colorRed := ansi.ColorCode("red")
-	colorGreen := ansi.ColorCode("green")
-	resetColor := ansi.ColorCode("reset")
+	var currentColor string = "reset"
+	var colorStr string = ""
 
 	// Start to build chart (top to bottom)
 	var buf bytes.Buffer
@@ -107,10 +109,12 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 			// Determine what to write
 			if col == 0 && line != 0 {
 				// Left axis
-				buf.WriteString(s.verticalSep)
+				currentColor, colorStr = s.colorStr(currentColor, "reset", s.verticalSep)
+				buf.WriteString(colorStr)
 			} else if line == 0 {
 				// Bottom axis
-				buf.WriteString(s.horizontalSep)
+				currentColor, colorStr = s.colorStr(currentColor, "reset", s.horizontalSep)
+				buf.WriteString(colorStr)
 			} else {
 				// Data point
 				colVal := data[col]
@@ -119,9 +123,11 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 				// Print?
 				if colVal >= minLineVal {
 					if secondaryColVal >= minLineVal {
-						buf.WriteString(fmt.Sprintf("%s%s%s", colorRed, "*", resetColor))
+						currentColor, colorStr = s.colorStr(currentColor, "red", "*")
+						buf.WriteString(colorStr)
 					} else {
-						buf.WriteString(fmt.Sprintf("%s%s%s", colorGreen, "o", resetColor))
+						currentColor, colorStr = s.colorStr(currentColor, "green", "o")
+						buf.WriteString(colorStr)
 					}
 				} else {
 					buf.WriteString(" ")
@@ -132,14 +138,32 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 			if line != 0 {
 				buf.WriteString(strings.Repeat(" ", s.colPad)) // Column padding
 			} else {
-				buf.WriteString(strings.Repeat(s.horizontalSep, s.colPad)) // Horizontal axis padding
+				// Horizontal axis padding
+				currentColor, colorStr = s.colorStr(currentColor, "reset", strings.Repeat(s.horizontalSep, s.colPad))
+				buf.WriteString(colorStr)
 			}
 		}
 		buf.WriteString("\n") // Close previous line
 	}
-	buf.WriteString("\n") // Final whiteline
+	buf.WriteString("\n")         // Final whiteline
+	buf.WriteString(s.colorReset) // Reset color
 
 	return buf.String(), nil
+}
+
+func (s *Statistics) colorStr(currentColor string, desiredColorName string, str string) (string, string) {
+	if currentColor == desiredColorName {
+		return currentColor, str
+	}
+	colorStr := ""
+	if desiredColorName == "green" {
+		colorStr = s.colorGreen
+	} else if desiredColorName == "red" {
+		colorStr = s.colorRed
+	} else if desiredColorName == "reset" {
+		colorStr = s.colorReset
+	}
+	return desiredColorName, fmt.Sprintf("%s%s", colorStr, str)
 }
 
 func newStatistics() *Statistics {
@@ -147,6 +171,9 @@ func newStatistics() *Statistics {
 		verticalSep:   "|",
 		horizontalSep: "_",
 		colPad:        3,
+		colorRed:      ansi.ColorCode("red"),
+		colorGreen:    ansi.ColorCode("green"),
+		colorReset:    ansi.ColorCode("reset"),
 	}
 	s.loadTerminalDimensions()
 	return s
