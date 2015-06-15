@@ -56,7 +56,7 @@ func main() {
 	router.POST("/filter", PostFilter)                // Create new filter
 	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
 	router.PUT("/filter/:id/result", PutFilterResult) // Store new results into a filter
-	router.PUT("/filter/stats", PutFilterStats)       // Store new statistics around filters
+	router.PUT("/stats/filters", PutFilterStats)      // Store new statistics around filters
 	router.GET("/filter", GetFilter)                  // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)        // Delete a filter
 
