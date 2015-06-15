@@ -24,7 +24,7 @@ type FilterStats struct {
 }
 
 type FilterTimeseries struct {
-	data map[int64]int64 `json:"data"` // ts => count
+	data map[int]int `json:"data"` // ts => count
 }
 
 type Filter struct {
@@ -78,7 +78,7 @@ func (f *Filter) Save() bool {
 }
 
 // @todo Support multiple adapters for storage of statistics, currently only in memory
-func (f *Filter) AddStats(metric int, timeBucket int64, count int64) bool {
+func (f *Filter) AddStats(metric int, timeBucket int, count int) bool {
 	f.statsMux.Lock()
 
 	// Stats wrapper
@@ -283,6 +283,6 @@ func newFilterStats() *FilterStats {
 
 func newFilterTimeseries() *FilterTimeseries {
 	return &FilterTimeseries{
-		data: make(map[int64]int64),
+		data: make(map[int]int),
 	}
 }
