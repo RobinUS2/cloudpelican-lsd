@@ -273,7 +273,7 @@ func NewFilterManager() *FilterManager {
 
 func newFilter() *Filter {
 	return &Filter{
-		f.stats: newFilterStats(),
+		stats: newFilterStats(),
 	}
 }
 
