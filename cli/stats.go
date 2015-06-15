@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -52,13 +53,24 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 		return "", errors.New("Metrics not available for this filter")
 	}
 	// @todo Sort by TS
-	for _, val := range inputData[metricId] {
+	// To store the keys in slice in sorted order
+	var keys []int
+	for ts, _ := range inputData[metricId] {
+		keys = append(keys, int(ts))
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		val := inputData[metricId][int64(k)]
 		data = append(data, val)
 		dataSecondary = append(dataSecondary, 0) // No error data yet
 	}
 
 	// Width and height for chart
 	minWidth := len(data)
+	if minWidth > s.terminalWidth {
+		log.Println("Warning, truncating data")
+		// @todo Compress data (merge data points and get sums in order to fit in screen)
+	}
 	maxHeight := s.terminalHeight - 4 // remove some for padding
 	maxWidth := int(math.Max(float64(minWidth), float64(s.terminalWidth)))
 
