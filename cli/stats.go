@@ -51,6 +51,7 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	if inputData[metricId] == nil || len(inputData[metricId]) < 1 {
 		return "", errors.New("Metrics not available for this filter")
 	}
+	// @todo Sort by TS
 	for _, val := range inputData[metricId] {
 		data = append(data, val)
 		dataSecondary = append(dataSecondary, 0) // No error data yet
