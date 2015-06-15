@@ -164,7 +164,7 @@ public class MatchBolt extends BaseRichBolt {
             if (b) {
                 // Emit match
                 _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg)); // Message
-                _collector.emit("match_stats", new Values(filter.Id(), 1, 1L)); // Counters
+                _collector.emit("match_stats", new Values(filter.Id(), MetricsEnum.MATCH.getMask(), 1L)); // Counters
             }
         }
         // No ack, is handled in outer
