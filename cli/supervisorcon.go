@@ -11,10 +11,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 type SupervisorCon struct {
+	filtersCache    []*Filter
+	filtersCacheMux sync.RWMutex
 }
 
 type Filter struct {
@@ -107,7 +110,15 @@ func (s *SupervisorCon) CreateFilter(name string, regex string) (*Filter, error)
 	if verbose {
 		log.Printf("Creating filter '%s' with regex '%s'", name, regex)
 	}
+	// Create
 	s._post(fmt.Sprintf("filter?name=%s&regex=%s", url.QueryEscape(name), url.QueryEscape(regex)))
+
+	// Clear cache
+	s.filtersCacheMux.Lock()
+	s.filtersCache = nil
+	s.filtersCacheMux.Unlock()
+
+	// Return instance
 	return s.FilterByName(name)
 }
 
@@ -120,6 +131,13 @@ func (s *SupervisorCon) RemoveFilter(name string) bool {
 		return false
 	}
 	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(filter.Id)))
+
+	// Clear cache
+	s.filtersCacheMux.Lock()
+	s.filtersCache = nil
+	s.filtersCacheMux.Unlock()
+
+	// Verify
 	verify, _ := s.FilterByName(name)
 	return verify == nil
 }
@@ -138,39 +156,65 @@ func (s *SupervisorCon) FilterByName(name string) (*Filter, error) {
 }
 
 func (s *SupervisorCon) Filters() ([]*Filter, error) {
-	data, err := s._get("filter")
-	if err != nil {
-		return nil, err
-	}
-	// Parse and create list
-	var resp map[string]interface{}
-	jErr := json.Unmarshal([]byte(data), &resp)
-	if jErr != nil {
-		return nil, jErr
-	}
-	list := make([]*Filter, 0)
-	for _, v := range resp["filters"].([]interface{}) {
-		elm := v.(map[string]interface{})
-		filter := newFilter()
-		filter.Regex = fmt.Sprintf("%s", elm["regex"])
-		filter.Name = fmt.Sprintf("%s", elm["name"])
-		filter.ClientHost = fmt.Sprintf("%s", elm["client_host"])
-		filter.Id = fmt.Sprintf("%s", elm["id"])
+	// Update function
+	fetchData := func() ([]*Filter, error) {
+		// List holder
+		list := make([]*Filter, 0)
 
-		// Tmp?
-		if strings.HasPrefix(filter.Name, TMP_FILTER_PREFIX) {
-			// @todo Remove if they are older than x days
-			// go func(id string) {
-			// 	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
-			// }(filter.Id)
-			continue
+		// Fetch API
+		data, err := s._get("filter")
+		if err != nil {
+			return nil, err
+		}
+		// Parse and create list
+		var resp map[string]interface{}
+		jErr := json.Unmarshal([]byte(data), &resp)
+		if jErr != nil {
+			return nil, jErr
+		}
+		for _, v := range resp["filters"].([]interface{}) {
+			elm := v.(map[string]interface{})
+			filter := newFilter()
+			filter.Regex = fmt.Sprintf("%s", elm["regex"])
+			filter.Name = fmt.Sprintf("%s", elm["name"])
+			filter.ClientHost = fmt.Sprintf("%s", elm["client_host"])
+			filter.Id = fmt.Sprintf("%s", elm["id"])
+
+			// Tmp?
+			if strings.HasPrefix(filter.Name, TMP_FILTER_PREFIX) {
+				// @todo Remove if they are older than x days
+				// go func(id string) {
+				// 	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
+				// }(filter.Id)
+				continue
+			}
+
+			// Append
+			list = append(list, filter)
 		}
 
-		// Append
-		list = append(list, filter)
+		// Put in cache
+		if len(list) > 0 {
+			s.filtersCacheMux.Lock()
+			s.filtersCache = list
+			s.filtersCacheMux.Unlock()
+		}
+
+		// Return
+		return list, nil
 	}
 
-	return list, nil
+	// From cache?
+	s.filtersCacheMux.RLock()
+	if s.filtersCache != nil {
+		s.filtersCacheMux.RUnlock()
+		go fetchData() // Async update
+		return s.filtersCache, nil
+	}
+	s.filtersCacheMux.RUnlock()
+
+	// Not from cache
+	return fetchData()
 }
 
 func (s *SupervisorCon) _get(uri string) (string, error) {
