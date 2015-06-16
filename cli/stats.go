@@ -77,9 +77,11 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 
 	// Width and height for chart
 	dataWidth := len(data)
-	if dataWidth > s.terminalWidth {
+	maxDataLen := s.terminalWidth - 1
+	if dataWidth > maxDataLen {
 		log.Println("Warning, truncating data to match terminal width")
-		data = data[:s.terminalWidth-1]
+		data = data[len(data)-maxDataLen:]
+		dataSecondary = dataSecondary[len(dataSecondary)-maxDataLen:]
 		dataWidth = len(data)
 		// @todo Compress data (merge data points and get sums in order to fit in screen)
 	}
