@@ -71,3 +71,5 @@ Saved session
 [application] => [rsyslog on host] => [kafka] => [storm] => [cloudpelican supervisor] => [cloudpelican CLI]
 
 ![alt tag](https://raw.github.com/RobinUS2/cloudpelican-lsd/master/docs/infra.png)
+
+![alt tag](https://raw.github.com/RobinUS2/cloudpelican-lsd/master/docs/storm_topology.png)
