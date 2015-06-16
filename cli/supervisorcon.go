@@ -25,7 +25,7 @@ type Filter struct {
 }
 
 // Returns a map of metricId => timestamp => count
-func (f *Filter) GetStats(rollup int64) (map[int]map[int64]int64, error) {
+func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, error) {
 	// Request
 	uri := fmt.Sprintf("filter/%s/stats", f.Id)
 	data, err := supervisorCon._get(uri)
@@ -40,21 +40,38 @@ func (f *Filter) GetStats(rollup int64) (map[int]map[int64]int64, error) {
 		return nil, je
 	}
 
+	// Now
+	var nowUnix int64 = time.Now().Unix()
+	var minTs int64 = nowUnix - window
+
 	// To map + rollup
 	var res map[int]map[int64]int64 = make(map[int]map[int64]int64)
 	for metricId, data := range d["stats"].(map[string]interface{}) {
+		// Convert metric to integer
 		i, _ := strconv.ParseInt(metricId, 10, 0)
 		metric := int(i)
 		if res[metric] == nil {
 			res[metric] = make(map[int64]int64)
 		}
+
+		// Iterate timestamp-value pairs
 		for tsStr, val := range data.(map[string]interface{}) {
+			// Convert to integer
 			tsI, _ := strconv.ParseInt(tsStr, 10, 64)
 			ts := int64(tsI)
+
+			// Honor window
+			if ts < minTs {
+				continue
+			}
+
+			// Determine bucket
 			bucket := ts
 			if rollup != -1 {
 				bucket = ts - (ts % rollup)
 			}
+
+			// Put in resultset
 			res[metric][bucket] += int64(val.(float64))
 		}
 	}

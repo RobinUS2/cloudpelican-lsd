@@ -210,7 +210,7 @@ func _handleConsole(input string) bool {
 		return true
 	} else if strings.Index(inputLower, "stats ") == 0 {
 		split := strings.SplitN(input, "stats ", 2)
-		if len(split) != 2 {
+		if len(split) < 2 {
 			printConsoleError(input)
 			return false
 		}
@@ -513,7 +513,64 @@ func auth(usr string, pwd string) {
 	}
 }
 
-func getStats(filterName string) {
+func intFromTimeStr(input string, def int64) (int64, error) {
+	var val int64 = def
+	var err error
+	if len(input) > 0 {
+		// m=minute, h=hour, d=day suffixes
+		var multiplier int64 = 1
+		if strings.HasSuffix(input, "m") {
+			multiplier = 60
+			input = strings.TrimRight(input, "m")
+		} else if strings.HasSuffix(input, "h") {
+			multiplier = 3600
+			input = strings.TrimRight(input, "h")
+		} else if strings.HasSuffix(input, "d") {
+			multiplier = 86400
+			input = strings.TrimRight(input, "d")
+		}
+		val, err = strconv.ParseInt(input, 10, 0)
+		if err != nil {
+			printConsoleError(fmt.Sprintf("Invalid %s", err))
+			return def, err
+		}
+		val *= multiplier
+	}
+	return val, nil
+}
+
+func getStats(input string) {
+	// Basic parsing
+	var filterName string = ""
+	var windowStr string = ""
+	var rollupStr string = ""
+	tokens := strings.Split(input, " ")
+	for i, token := range tokens {
+		var previousToken string = ""
+		if i != 0 {
+			previousToken = tokens[i-1]
+		}
+
+		// Very simple parsing
+		if i == 0 {
+			// Filter name
+			filterName = token
+		} else if previousToken == "window" {
+			// Window (e.g. 10m)
+			windowStr = token
+		} else if previousToken == "rollup" {
+			// Rollup (e.g. minutely, hourly)
+			rollupStr = token
+		}
+	}
+
+	// Window
+	window, _ := intFromTimeStr(windowStr, 86400)
+
+	// Rollup
+	rollup, _ := intFromTimeStr(rollupStr, 60)
+
+	// Get filter
 	filter, filterE := supervisorCon.FilterByName(filterName)
 	if filterE != nil {
 		printConsoleError("Filter not found")
@@ -521,7 +578,7 @@ func getStats(filterName string) {
 	}
 
 	// Load
-	data, statsE := filter.GetStats(60) // @todo dynamic, default to hour?
+	data, statsE := filter.GetStats(window, rollup)
 	if statsE != nil {
 		printConsoleError(fmt.Sprintf("%s", statsE))
 		return
