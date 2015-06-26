@@ -68,7 +68,23 @@
             <artifactId>gson</artifactId>
             <version>2.3.1</version>
         </dependency>
+        <dependency>
+            <groupId>nl.us2.timeseriesoutlierdetection</groupId>
+            <artifactId>timeseriesoutlierdetection</artifactId>
+            <version>0.1</version>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>timeseries-outlier-detection-mvn-repo</id>
+            <url>https://raw.github.com/RobinUS2/timeseries-outlier-detection/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
