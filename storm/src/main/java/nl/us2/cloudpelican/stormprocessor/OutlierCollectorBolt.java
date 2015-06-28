@@ -4,29 +4,21 @@ package nl.us2.cloudpelican.stormprocessor;
  * Created by robin on 07/06/15.
  */
 
-import backtype.storm.Config;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
-import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import nl.us2.timeseriesoutlierdetection.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import storm.starter.util.TupleHelpers;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -53,7 +45,24 @@ public class OutlierCollectorBolt extends BaseRichBolt {
         long ts = tuple.getLongByField("timestamp");
         double score = tuple.getDoubleByField("score");
         LOG.info(filterId + " " + ts + " " + score);
-        // @todo
+
+        // Send to supervisor
+        try {
+            HttpClient client = HttpClientBuilder.create().build();
+
+            String url = settings.get("supervisor_host") + "filter/" + filterId + "/outlier?timestamp=" + ts + "&score=" + score;
+            HttpPost req = new HttpPost(url);
+            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
+            req.setHeader("Authorization", "Basic " + token);
+            HttpResponse resp = client.execute(req);
+            int status = resp.getStatusLine().getStatusCode();
+            if (status >= 400) {
+                throw new Exception("Invalid status " + status);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to write data to supervisor", e);
+        }
+
         _collector.ack(tuple);
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
