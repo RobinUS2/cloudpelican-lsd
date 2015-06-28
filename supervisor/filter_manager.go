@@ -176,7 +176,8 @@ func (f *Filter) AddOutlier(ts int64, score float64) bool {
 	var err error = nil
 	filterManager.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(filterManager.filterOutliersTable))
-		err = b.Put([]byte(id), []byte(json))
+		// f-<filterid> prefix to allow prefix scans
+		err = b.Put([]byte(fmt.Sprintf("f-%s-%s", f.Id, id)), []byte(json))
 		if err != nil {
 			log.Printf("Failed to create outlier %s", err)
 		}
