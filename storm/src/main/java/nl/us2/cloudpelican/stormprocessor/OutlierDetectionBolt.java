@@ -114,18 +114,33 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         MutableDataLoader dl = new MutableDataLoader("fkh-" + filterId);
         long now = new Date().getTime();
         long minTs = (now / 1000L) - 12*3600; // x hours in past
-        long maxTs = (now / 1000L) - 1*60; // Skip last minute
+        int skipLastSeconds = 60;
+        long maxTs = (now / 1000L) - skipLastSeconds; // Skip last minute
+        int timeResolution = 60; // in seconds
+        long lastTs = now - skipLastSeconds;
+        lastTs = lastTs - (lastTs % timeResolution);
         for (Map.Entry<String, JsonElement> kv : stats.entrySet()) {
+            boolean foundLastTs = false;
             String serieName = kv.getKey().equals("1") ? "regular" : "errors";
             for (Map.Entry<String, JsonElement> tskv : kv.getValue().getAsJsonObject().entrySet()) {
                 Long ts = Long.parseLong(tskv.getKey());
                 if (ts < minTs || ts > maxTs) {
                     continue;
                 }
+                if (tskv.getKey().equals(String.valueOf(lastTs))) {
+                    foundLastTs = true;
+                }
                 dl.addData(serieName, tskv.getKey(), tskv.getValue().getAsString());
             }
+
+            // Add the last data point if data seems to be scarce
+            if (!foundLastTs) {
+                LOG.info("Did not find last expected time point at " + lastTs + " inserting to pad data set");
+                dl.addData(serieName, String.valueOf(lastTs), "0");
+            }
         }
-        //dl.setDesiredTimeResolution(60);
+
+        dl.setDesiredTimeResolution(timeResolution);
         dl.setForecastPeriods(1);
         dl.load();
         dl.analyze(analyzers);
