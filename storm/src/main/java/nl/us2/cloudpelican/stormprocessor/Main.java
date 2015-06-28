@@ -1,19 +1,18 @@
 package nl.us2.cloudpelican.stormprocessor;
 
-import backtype.storm.tuple.Fields;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import storm.kafka.*;
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
 import backtype.storm.StormSubmitter;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
+import backtype.storm.tuple.Fields;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import storm.kafka.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TimeZone;
-import java.util.UUID;
 
 /**
  * Created by robin on 07/06/15.

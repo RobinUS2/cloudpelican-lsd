@@ -4,7 +4,6 @@ package nl.us2.cloudpelican.stormprocessor;
  * Created by robin on 07/06/15.
  */
 
-import backtype.storm.Config;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
@@ -14,17 +13,13 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import de.daslaboratorium.machinelearning.classifier.BayesClassifier;
 import de.daslaboratorium.machinelearning.classifier.Classifier;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.storm.http.HttpResponse;
-import org.apache.storm.http.client.HttpClient;
-import org.apache.storm.http.client.methods.HttpPut;
-import org.apache.storm.http.entity.StringEntity;
-import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import storm.starter.util.TupleHelpers;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
