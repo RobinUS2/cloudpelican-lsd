@@ -235,7 +235,7 @@ func PostFilterOutlier(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 
 	// Create outlier
-	log.Printf("Filter %s outlier at  ts %d score %f", filter.Id, ts, scoreVal)
+	log.Printf("Filter %s outlier at ts %d score %f", filter.Id, ts, scoreVal)
 	res := filter.AddOutlier(ts, scoreVal)
 	jresp.Set("ack", res)
 
