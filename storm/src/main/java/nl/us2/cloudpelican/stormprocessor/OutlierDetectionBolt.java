@@ -113,11 +113,12 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         // Detect outliers
         MutableDataLoader dl = new MutableDataLoader("fkh-" + filterId);
         long now = new Date().getTime();
-        long minTs = (now / 1000L) - 12*3600; // x hours in past
+        long unixTs = now / 1000L;
+        long minTs = unixTs - 12*3600; // x hours in past
         int skipLastSeconds = 60;
-        long maxTs = (now / 1000L) - skipLastSeconds; // Skip last minute
+        long maxTs = unixTs - skipLastSeconds; // Skip last minute
         int timeResolution = 60; // in seconds
-        long lastTs = now - skipLastSeconds;
+        long lastTs = unixTs - skipLastSeconds;
         lastTs = lastTs - (lastTs % timeResolution);
         for (Map.Entry<String, JsonElement> kv : stats.entrySet()) {
             boolean foundLastTs = false;
