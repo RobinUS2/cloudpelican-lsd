@@ -16,11 +16,12 @@ import (
 )
 
 type FilterManager struct {
-	db               *bolt.DB
-	filterTable      string
-	filterResults    map[string][]string
-	filterStatsTable string
-	filterStats      map[string]*FilterStats
+	db                  *bolt.DB
+	filterTable         string
+	filterResults       map[string][]string
+	filterStatsTable    string
+	filterStats         map[string]*FilterStats
+	filterOutliersTable string
 }
 
 type FilterStats struct {
@@ -201,6 +202,15 @@ func (fm *FilterManager) Open() {
 	wg.Add(1)
 	fm.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterStatsTable))
+		if err != nil {
+			log.Fatal(fmt.Errorf("create bucket: %s", err))
+		}
+		wg.Done()
+		return nil
+	})
+	wg.Add(1)
+	fm.db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterOutliersTable))
 		if err != nil {
 			log.Fatal(fmt.Errorf("create bucket: %s", err))
 		}
@@ -394,10 +404,11 @@ func filterFromJson(b []byte) *Filter {
 // Init the filter manager
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:      "filters",
-		filterStatsTable: "filter_stats",
-		filterResults:    make(map[string][]string),
-		filterStats:      make(map[string]*FilterStats),
+		filterTable:         "filters",
+		filterStatsTable:    "filter_stats",
+		filterOutliersTable: "filter_outliers",
+		filterResults:       make(map[string][]string),
+		filterStats:         make(map[string]*FilterStats),
 	}
 	fm.Open()
 	fm.TimeseriesCleaner()
