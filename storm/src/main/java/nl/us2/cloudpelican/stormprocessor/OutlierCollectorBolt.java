@@ -49,6 +49,10 @@ public class OutlierCollectorBolt extends BaseRichBolt {
     }
 
     public void execute(Tuple tuple) {
+        String filterId = tuple.getStringByField("filter_id");
+        long ts = tuple.getLongByField("timestamp");
+        double score = tuple.getDoubleByField("score");
+        LOG.info(filterId + " " + ts + " " + score);
         // @todo
         _collector.ack(tuple);
     }
