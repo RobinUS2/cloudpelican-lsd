@@ -146,6 +146,47 @@ func (f *Filter) GetStats() *FilterStats {
 	return f.Stats
 }
 
+type Outlier struct {
+	FilterId  string  `json:"filter_id"`
+	Score     float64 `json:"score"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+// Store outlier
+func (f *Filter) AddOutlier(ts int64, score float64) bool {
+	// ID
+	var id string = uuid.New()
+
+	// Struct
+	outlier := &Outlier{}
+	outlier.FilterId = f.Id
+	outlier.Timestamp = ts
+	outlier.Score = score
+
+	// To JSON
+	json, jsonErr := json.Marshal(outlier)
+	if jsonErr != nil {
+		log.Printf("Failed to marshal to json: %s", jsonErr)
+		return false
+	}
+
+	// Create
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var err error = nil
+	filterManager.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(filterManager.filterOutliersTable))
+		err = b.Put([]byte(id), []byte(json))
+		if err != nil {
+			log.Printf("Failed to create outlier %s", err)
+		}
+		wg.Done()
+		return err
+	})
+	wg.Wait()
+	return err == nil
+}
+
 // @todo Support multiple adapters for storage of results, currently only in memory
 func (f *Filter) AddResults(res []string) bool {
 	f.resultsMux.Lock()
