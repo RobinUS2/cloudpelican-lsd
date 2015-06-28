@@ -72,6 +72,16 @@
             <groupId>nl.us2.timeseriesoutlierdetection</groupId>
             <artifactId>timeseriesoutlierdetection</artifactId>
             <version>0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>nl.us2.timeseriesoutlierdetection</groupId>
+                    <artifactId>timeseriesoutlierdetection</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
