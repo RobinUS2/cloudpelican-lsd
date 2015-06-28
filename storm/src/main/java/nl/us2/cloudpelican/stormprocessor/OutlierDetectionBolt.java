@@ -9,7 +9,9 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -129,7 +131,8 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         dl.analyze(analyzers);
         List<ValidatedTimeserieOutlier> outliers = dl.validate();
         for (ValidatedTimeserieOutlier outlier : outliers) {
-            LOG.info("Filter "  + filterId + " outlier at " + outlier.getTs() + " score " + outlier.getScore());
+            LOG.info("Filter "  + filterId + " outlier at " + outlier.getTs() + " (" + new Date(outlier.getTs() * 1000L).toString() + ") score " + outlier.getScore());
+            _collector.emit("outliers", new Values(filterId, outlier.getTs(), outlier.getScore()));
         }
     }
 
@@ -150,5 +153,6 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        declarer.declareStream("outliers", new Fields("filter_id", "timestamp", "score"));
     }
 }

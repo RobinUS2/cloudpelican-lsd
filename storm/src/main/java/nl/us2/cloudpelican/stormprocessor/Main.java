@@ -25,6 +25,7 @@ public class Main {
     public static String SUPERVISOR_ERROR_STATS_WRITER = "supervisor_error_stats_writer";
     public static String ERROR_CLASSIFIER_BOLT = "error_classifier";
     public static String OUTLIER_DETECTION = "outlier_detection";
+    public static String OUTLIER_COLLECTOR = "outlier_collector";
 
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
@@ -91,7 +92,8 @@ public class Main {
         builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
-        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+        builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), globalConcurrency * 1).shuffleGrouping(OUTLIER_DETECTION, "outliers");
 
         // Debug on for testing
         Config conf = new Config();
