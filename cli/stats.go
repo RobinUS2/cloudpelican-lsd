@@ -47,12 +47,36 @@ func (s *Statistics) loadTerminalDimensions() {
 	}
 }
 
-func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int64) (string, error) {
+func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int64, flags map[string]bool) (string, error) {
 	// Random data (primary is top, secondary is filled, e.g. errors)
 	data := make([]int64, 0)
 	dataSecondary := make([]int64, 0)
+
+	// Metric source IDs
 	metricId := 1
-	errorMetricId := 2
+	secondaryMetricId := 2
+
+	// Colors
+	primaryColor := "green"
+	secondaryColor := "red"
+
+	// Primary sign
+	primarySign := "o"
+	secondarySign := "*"
+
+	// Flags
+	if flags["hide_error"] {
+		secondaryMetricId = -1 // Disable errors
+	}
+	if flags["hide_regular"] {
+		// Swap error metric to primary
+		metricId = secondaryMetricId
+		primaryColor = secondaryColor
+		primarySign = secondarySign
+		secondaryMetricId = -1 // Disable secondary
+	}
+
+	// Validate
 	if inputData[metricId] == nil || len(inputData[metricId]) < 1 {
 		return "", errors.New("Metrics not available for this filter")
 	}
@@ -67,11 +91,11 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 		data = append(data, val)
 
 		// Errors
-		var errorVal int64 = 0
-		if inputData[errorMetricId] != nil {
-			errorVal = inputData[errorMetricId][int64(k)]
+		var secVal int64 = 0
+		if secondaryMetricId > 0 && inputData[secondaryMetricId] != nil {
+			secVal = inputData[secondaryMetricId][int64(k)]
 		}
-		dataSecondary = append(dataSecondary, errorVal)
+		dataSecondary = append(dataSecondary, secVal)
 	}
 
 	// Width and height for chart
@@ -131,10 +155,10 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 				// Print?
 				if colVal >= minLineVal {
 					if secondaryColVal >= minLineVal {
-						currentColor, colorStr = s.colorStr(currentColor, "red", "*")
+						currentColor, colorStr = s.colorStr(currentColor, secondaryColor, secondarySign)
 						buf.WriteString(colorStr)
 					} else {
-						currentColor, colorStr = s.colorStr(currentColor, "green", "o")
+						currentColor, colorStr = s.colorStr(currentColor, primaryColor, primarySign)
 						buf.WriteString(colorStr)
 					}
 				} else {

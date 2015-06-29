@@ -569,6 +569,7 @@ func getStats(input string) {
 	var filterName string = ""
 	var windowStr string = ""
 	var rollupStr string = ""
+	var flags map[string]bool = make(map[string]bool)
 	tokens := strings.Split(input, " ")
 	for i, token := range tokens {
 		var previousToken string = ""
@@ -586,6 +587,13 @@ func getStats(input string) {
 		} else if previousToken == "rollup" {
 			// Rollup (e.g. minutely, hourly)
 			rollupStr = token
+		}
+
+		// Flags
+		if token == "-regular" {
+			flags["hide_regular"] = true
+		} else if token == "-error" || token == "-errors" {
+			flags["hide_error"] = true
 		}
 	}
 
@@ -619,7 +627,7 @@ func getStats(input string) {
 	clearConsole()
 
 	// Render chart
-	chart, chartE := stats.RenderChart(filter, data)
+	chart, chartE := stats.RenderChart(filter, data, flags)
 	if chartE != nil {
 		printConsoleError(fmt.Sprintf("%s", chartE))
 		return
