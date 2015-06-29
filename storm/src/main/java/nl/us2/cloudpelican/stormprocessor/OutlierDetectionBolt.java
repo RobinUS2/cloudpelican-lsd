@@ -52,6 +52,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         _collector = collector;
         liveFilters = new HashMap<String, Long>();
         jsonParser = new JsonParser();
+        filterMaxTsAnalayzed = new HashMap<String, Long>();
 
         // Active analyzers
         analyzers = new ArrayList<ITimeserieAnalyzer>();
