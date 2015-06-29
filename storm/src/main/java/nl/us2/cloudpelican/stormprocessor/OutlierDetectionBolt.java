@@ -126,7 +126,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
             String serieName = kv.getKey().equals("1") ? "regular" : "errors";
             for (Map.Entry<String, JsonElement> tskv : kv.getValue().getAsJsonObject().entrySet()) {
                 Long ts = Long.parseLong(tskv.getKey());
-                if (ts < minTs || ts > maxTs) {
+                if (ts < minTs || ts >= maxTs) {
                     continue;
                 }
                 if (ts > dataMaxTs) {
