@@ -152,7 +152,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         List<ValidatedTimeserieOutlier> outliers = dl.validate();
         for (ValidatedTimeserieOutlier outlier : outliers) {
             LOG.info("Filter "  + filterId + " outlier at " + outlier.getTs() + " (" + new Date(outlier.getTs() * 1000L).toString() + ") score " + outlier.getScore());
-            _collector.emit("outliers", new Values(filterId, outlier.getTs(), outlier.getScore()));
+            _collector.emit("outliers", new Values(filterId, outlier.getTs(), outlier.getScore(), outlier.getDetails().toString()));
         }
     }
 
@@ -173,6 +173,6 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("outliers", new Fields("filter_id", "timestamp", "score"));
+        declarer.declareStream("outliers", new Fields("filter_id", "timestamp", "score", "json_details"));
     }
 }

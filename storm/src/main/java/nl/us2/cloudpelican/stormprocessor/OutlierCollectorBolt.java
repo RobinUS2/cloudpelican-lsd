@@ -13,6 +13,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,8 @@ public class OutlierCollectorBolt extends BaseRichBolt {
         String filterId = tuple.getStringByField("filter_id");
         long ts = tuple.getLongByField("timestamp");
         double score = tuple.getDoubleByField("score");
-        LOG.info(filterId + " " + ts + " " + score);
+        String jsonDetails = tuple.getStringByField("json_details");
+        LOG.info(filterId + " " + ts + " " + score + " " + jsonDetails);
 
         // Send to supervisor
         try {
@@ -52,6 +54,7 @@ public class OutlierCollectorBolt extends BaseRichBolt {
 
             String url = settings.get("supervisor_host") + "filter/" + filterId + "/outlier?timestamp=" + ts + "&score=" + score;
             HttpPost req = new HttpPost(url);
+            req.setEntity(new StringEntity(jsonDetails));
             String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
             req.setHeader("Authorization", "Basic " + token);
             HttpResponse resp = client.execute(req);
