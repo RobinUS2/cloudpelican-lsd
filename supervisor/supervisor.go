@@ -73,8 +73,8 @@ func DeleteAdminOutliers(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	if !basicAuth(w, r) {
 		return
 	}
-	res := filterManager.TruncateOutliers()
 	jresp := jresp.NewJsonResp()
+	res := filterManager.TruncateOutliers()
 	jresp.Set("truncated", res)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
