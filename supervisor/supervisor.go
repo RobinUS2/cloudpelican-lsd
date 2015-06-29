@@ -54,18 +54,30 @@ func main() {
 	router.GET("/ping", GetPing)
 
 	// Filters
-	router.POST("/filter", PostFilter)                    // Create new filter
-	router.GET("/filter/:id/result", GetFilterResult)     // Get results of a single filter
-	router.GET("/filter/:id/stats", GetFilterStats)       // Get stats of a single filter
-	router.PUT("/filter/:id/result", PutFilterResult)     // Store new results into a filter
-	router.POST("/filter/:id/outlier", PostFilterOutlier) // Create new record of a detected outlier
-	router.PUT("/stats/filters", PutStatsFilters)         // Store new statistics around filters
-	router.GET("/filter", GetFilter)                      // Get all filters
-	router.DELETE("/filter/:id", DeleteFilter)            // Delete a filter
+	router.POST("/filter", PostFilter)                             // Create new filter
+	router.GET("/filter/:id/result", GetFilterResult)              // Get results of a single filter
+	router.GET("/filter/:id/stats", GetFilterStats)                // Get stats of a single filter
+	router.PUT("/filter/:id/result", PutFilterResult)              // Store new results into a filter
+	router.POST("/filter/:id/outlier", PostFilterOutlier)          // Create new record of a detected outlier
+	router.PUT("/stats/filters", PutStatsFilters)                  // Store new statistics around filters
+	router.GET("/filter", GetFilter)                               // Get all filters
+	router.DELETE("/filter/:id", DeleteFilter)                     // Delete a filter
+	router.DELETE("/admin/truncate/outliers", DeleteAdminOutliers) // Delete outliers
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+}
+
+func DeleteAdminOutliers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	res := filterManager.TruncateOutliers()
+	jresp := jresp.NewJsonResp()
+	jresp.Set("truncated", res)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
 }
 
 func GetPing(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
