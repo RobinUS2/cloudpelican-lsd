@@ -123,7 +123,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         long maxTs = unixTsBucket - skipLastSeconds; // Skip last X seconds
         long dataMaxTs = Long.MIN_VALUE;
         for (Map.Entry<String, JsonElement> kv : stats.entrySet()) {
-            String serieName = kv.getKey().equals("1") ? "regular" : "errors";
+            String serieName = kv.getKey().equals("1") ? "regular" : "error";
             for (Map.Entry<String, JsonElement> tskv : kv.getValue().getAsJsonObject().entrySet()) {
                 Long ts = Long.parseLong(tskv.getKey());
                 if (ts < minTs || ts >= maxTs) {
