@@ -37,6 +37,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     OutputCollector _collector;
     private HashMap<String, String> settings;
     private HashMap<String, Long> liveFilters;
+    private HashMap<String, Long> filterMaxTsAnalayzed;
     private JsonParser jsonParser;
     private List<ITimeserieAnalyzer> analyzers;
 
@@ -118,29 +119,30 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         int skipLastSeconds = 60;
         long maxTs = unixTs - skipLastSeconds; // Skip last minute
         int timeResolution = 60; // in seconds
-        long lastTs = unixTs - skipLastSeconds;
-        lastTs = lastTs - (lastTs % timeResolution);
+        long dataMaxTs = Long.MIN_VALUE;
         for (Map.Entry<String, JsonElement> kv : stats.entrySet()) {
-            boolean foundLastTs = false;
             String serieName = kv.getKey().equals("1") ? "regular" : "errors";
             for (Map.Entry<String, JsonElement> tskv : kv.getValue().getAsJsonObject().entrySet()) {
                 Long ts = Long.parseLong(tskv.getKey());
                 if (ts < minTs || ts > maxTs) {
                     continue;
                 }
-                if (tskv.getKey().equals(String.valueOf(lastTs))) {
-                    foundLastTs = true;
+                if (ts > dataMaxTs) {
+                    dataMaxTs = ts;
                 }
                 dl.addData(serieName, tskv.getKey(), tskv.getValue().getAsString());
             }
-
-            // Add the last data point if data seems to be scarce
-            if (!foundLastTs) {
-                LOG.info("Did not find last expected time point at " + lastTs + " inserting to pad data set");
-                dl.addData(serieName, String.valueOf(lastTs), "0");
-            }
         }
 
+        // Check dataMaxTs against local test to reduce overhead
+        long lastAnalyzed = filterMaxTsAnalayzed.getOrDefault(filterId, 0L);
+        if (dataMaxTs < lastAnalyzed) {
+            // Do nothing
+            return;
+        }
+        filterMaxTsAnalayzed.put(filterId, dataMaxTs);
+
+        // Analyze
         dl.setDesiredTimeResolution(timeResolution);
         dl.setForecastPeriods(1);
         dl.load();
