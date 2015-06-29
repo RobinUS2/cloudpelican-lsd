@@ -234,9 +234,16 @@ func PostFilterOutlier(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	}
 
+	// Details
+	bodyBytes, bodyErr := ioutil.ReadAll(r.Body)
+	var details string = ""
+	if bodyErr == nil {
+		details = string(bodyBytes)
+	}
+
 	// Create outlier
-	log.Printf("Filter %s outlier at ts %d score %f", filter.Id, ts, scoreVal)
-	res := filter.AddOutlier(ts, scoreVal)
+	log.Printf("Filter %s outlier at ts %d score %f details %s", filter.Id, ts, scoreVal, details)
+	res := filter.AddOutlier(ts, scoreVal, details)
 	jresp.Set("ack", res)
 
 	// Done

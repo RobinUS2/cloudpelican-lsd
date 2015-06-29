@@ -150,10 +150,11 @@ type Outlier struct {
 	FilterId  string  `json:"filter_id"`
 	Score     float64 `json:"score"`
 	Timestamp int64   `json:"timestamp"`
+	Details   string  `json:"details"`
 }
 
 // Store outlier
-func (f *Filter) AddOutlier(ts int64, score float64) bool {
+func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
 	// ID
 	var id string = uuid.New()
 
@@ -162,6 +163,7 @@ func (f *Filter) AddOutlier(ts int64, score float64) bool {
 	outlier.FilterId = f.Id
 	outlier.Timestamp = ts
 	outlier.Score = score
+	outlier.Details = details
 
 	// To JSON
 	json, jsonErr := json.Marshal(outlier)
