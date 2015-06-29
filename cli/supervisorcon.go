@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -59,6 +60,8 @@ func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, 
 		}
 
 		// Iterate timestamp-value pairs
+		var lowestBucket int64 = math.MaxInt64
+		var highestBucket int64 = math.MinInt64
 		for tsStr, val := range data.(map[string]interface{}) {
 			// Convert to integer
 			tsI, _ := strconv.ParseInt(tsStr, 10, 64)
@@ -75,10 +78,33 @@ func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, 
 				bucket = ts - (ts % rollup)
 			}
 
+			// Store first bucket
+			if bucket < lowestBucket {
+				lowestBucket = bucket
+			}
+			if bucket > highestBucket {
+				highestBucket = bucket
+			}
+
 			// Put in resultset
 			res[metric][bucket] += int64(val.(float64))
 		}
+
+		// Fill any gaps
+		// log.Printf("first key %d", lowestBucket)
+		// log.Printf("last key %d", highestBucket)
+		// log.Printf("step size %d", rollup)
+		// log.Printf("len before %d", len(res[metric]))
+		for i := lowestBucket; i < highestBucket; i += rollup {
+			// Explictly set the value
+			if res[metric][i] == 0 {
+				res[metric][i] = 0
+			}
+		}
+		// log.Printf("len after %d", len(res[metric]))
+
 	}
+
 	return res, nil
 }
 
