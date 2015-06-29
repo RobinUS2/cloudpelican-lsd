@@ -30,9 +30,11 @@ public class ErrorClassifierBolt extends BaseRichBolt {
     OutputCollector _collector;
     private HashMap<String, String> settings;
     private HashMap<String, Classifier<String, String>> classifiers;
+    private HashMap<String, Long> samplesTrained;
     private String[] errorWords;
-    public static String CLASSIFY_ERROR = "error";
-    public static String CLASSIFY_REGULAR = "regular";
+    public static final String CLASSIFY_ERROR = "error";
+    public static final String CLASSIFY_REGULAR = "regular";
+    public static final long MIN_TRAIN_COUNT = 100L;
 
     private static final Logger LOG = LoggerFactory.getLogger(ErrorClassifierBolt.class);
 
@@ -40,6 +42,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         super();
         this.settings = settings;
         this.classifiers = new HashMap<String, Classifier<String, String>>();
+        this.samplesTrained = new HashMap<String, Long>();
         this.errorWords = ("err;error;fail;failed;failure;timed out;exception;unexpected;not found;unauthorized;not authorized;missing;reject;rejected;drop;dropped;warn;warning;crit;critical;fatal;emerg;emergency;alert;404").split(";");
     }
 
@@ -55,6 +58,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         // Get classifier
         if (!classifiers.containsKey(filterId)) {
             classifiers.put(filterId, new BayesClassifier<String, String>());
+            samplesTrained.put(filterId, 0L);
         }
 
         // Word in blacklist?
@@ -78,8 +82,12 @@ public class ErrorClassifierBolt extends BaseRichBolt {
             classifiers.get(filterId).learn(CLASSIFY_REGULAR, msgTokens);
         }
 
+        // Increment samples trained
+        long trainCount = samplesTrained.get(filterId);
+        samplesTrained.put(filterId, trainCount + 1L);
+
         // Match?
-        if (classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
+        if (trainCount >= MIN_TRAIN_COUNT && classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
             LOG.debug("Classified as error: " + msg);
             _collector.emit("error_stats", new Values(filterId, MetricsEnum.ERRROR.getMask(), 1L)); // Counters
         }
