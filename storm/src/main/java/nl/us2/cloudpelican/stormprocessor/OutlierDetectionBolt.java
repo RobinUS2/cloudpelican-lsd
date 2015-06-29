@@ -40,6 +40,8 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     private HashMap<String, Long> filterMaxTsAnalayzed;
     private JsonParser jsonParser;
     private List<ITimeserieAnalyzer> analyzers;
+    private long startTime;
+    private static final int MIN_UPTIME = 60; // Seconds before this class starts outlier detection
 
     private static final Logger LOG = LoggerFactory.getLogger(OutlierDetectionBolt.class);
 
@@ -68,6 +70,13 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         analyzers.add(new TimeBucketSimpleRegressionTimeserieAnalyzer());
         analyzers.add(new MultipleLinearRegressionTimeserieAnalyzer());
         analyzers.add(new SimpleExponentialSmoothingTimeserieAnalyzer());
+
+        // Start time
+        startTime = now();
+    }
+
+    protected long now() {
+        return new Date().getTime() / 1000L;
     }
 
     public void execute(Tuple tuple) {
@@ -80,9 +89,16 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     }
 
     public void executeTick() {
+        // Only process after a while to prevent issues after a cold start (classifiers still learning, bumps in traffic, etc)
+        long uptime = now() - startTime;
+        if (uptime < MIN_UPTIME) {
+            LOG.info("Not running, uptime is " + uptime + " did not reach threshold of " + MIN_UPTIME + " second(s)");
+            return;
+        }
+
         // Clean up list
         ArrayList<String> toRemove = new ArrayList<String>();
-        long maxAge = new Date().getTime() - (1000 * 5 * 60); // Considered stale after 5 minutes
+        long maxAge = new Date().getTime() - (1000 * 10 * 60); // Considered stale after X minutes
         for (Map.Entry<String, Long> kv : liveFilters.entrySet()) {
             if (kv.getValue() < maxAge) {
                 toRemove.add(kv.getKey());
@@ -93,6 +109,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
             LOG.info("Removed stale filter " + k);
         }
 
+        // Run outlier checks
         for (String filterId : liveFilters.keySet()) {
             try {
                 _checkOutlier(filterId);
