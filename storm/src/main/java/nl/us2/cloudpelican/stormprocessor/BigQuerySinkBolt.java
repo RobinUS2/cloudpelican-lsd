@@ -17,10 +17,7 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.SecurityUtils;
 import com.google.api.services.bigquery.Bigquery;
-import com.google.api.services.bigquery.model.Table;
-import com.google.api.services.bigquery.model.TableFieldSchema;
-import com.google.api.services.bigquery.model.TableReference;
-import com.google.api.services.bigquery.model.TableSchema;
+import com.google.api.services.bigquery.model.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
@@ -115,15 +112,37 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     protected void _flush() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
-            // Prepare target table
-            Date now = new Date();
-            String date = sdf.format(now);
-            String targetTable = kv.getKey() +"_results_" + date;
-            targetTable = targetTable.replace('-', '_');
-            prepareTable(targetTable);
+            try {
+                // Prepare target table
+                Date now = new Date();
+                String date = sdf.format(now);
+                String targetTable = kv.getKey() + "_results_" + date;
+                targetTable = targetTable.replace('-', '_');
+                prepareTable(targetTable);
 
-            // Log lines for debug
-            LOG.info(kv.getValue().size() + " lines for " + kv.getKey());
+                // Log lines for debug
+                LOG.info(kv.getValue().size() + " lines pending for " + kv.getKey());
+
+                // Write to Google
+                ArrayList<TableDataInsertAllRequest.Rows> rows = new ArrayList<TableDataInsertAllRequest.Rows>();
+                for (String line : kv.getValue()) {
+                    // Record
+                    Map<String, Object> rowData = new HashMap<String, Object>();
+                    rowData.put("_raw", line);
+                    TableDataInsertAllRequest.Rows row = new TableDataInsertAllRequest.Rows().setJson(rowData);
+                    rows.add(row);
+                }
+
+                // Execute
+                TableDataInsertAllRequest ir = new TableDataInsertAllRequest().setRows(rows);
+                TableDataInsertAllResponse response = bigquery.tabledata().insertAll(projectId, datasetId, targetTable, ir).execute();
+                List<TableDataInsertAllResponse.InsertErrors> errors = response.getInsertErrors();
+                if (errors != null) {
+                    LOG.error(errors.size() + " error(s) while writing " + kv.getKey() + " to BigQuery");
+                }
+            } catch (Exception e) {
+                LOG.error("Failed to write data of " + kv.getKey() + " to BigQuery", e);
+            }
         }
         resultAggregator.clear();
     }
