@@ -122,7 +122,7 @@ public class Main {
                     // Google BigQuery sink
                     String sinkName = "sink_" + sinkType + "_" + sinkId;
                     LOG.info("Setting up sink '" + sinkName + "'");
-                    builder.setBolt(sinkName, new BigQuerySinkBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, new BigQuerySinkBolt(sinkId, settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }  else {
                     throw new Exception("Sink type '" + sinkType + "' not supported");
                 }

@@ -28,73 +28,26 @@ import java.util.Map;
  *
  * @author robin
  */
-public class BigQuerySinkBolt extends BaseRichBolt {
-
-    OutputCollector _collector;
-    HashMap<String, ArrayList<String>> resultAggregator;
-    private Settings settings;
-    private static final int BATCH_SIZE = 500;
+public class BigQuerySinkBolt extends AbstractSinkBolt {
 
     private static final Logger LOG = LoggerFactory.getLogger(BigQuerySinkBolt.class);
 
-    public BigQuerySinkBolt(Settings settings) {
-        super();
-        this.settings = settings;
+    public BigQuerySinkBolt(String sinkId, Settings settings) {
+        super(sinkId, settings);
     }
 
-    public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-        _collector = collector;
-        resultAggregator = new HashMap<String, ArrayList<String>>();
-    }
-
-    public void execute(Tuple tuple) {
-        if (TupleHelpers.isTickTuple(tuple)) {
-            executeTick();
-        } else {
-            executeTuple(tuple);
-        }
-        _collector.ack(tuple);
-    }
-
-    public void executeTick() {
-        _flush();
+    public boolean isValid() {
+        // @todo validate
+        LOG.info(getSinkVar("project_id"));
+        return true;
     }
 
     protected void _flush() {
         for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
-            for (String line : kv.getValue()) {
-                LOG.info(line);
-            }
+            LOG.info(kv.getValue().size() + " lines for " + kv.getKey());
         }
         resultAggregator.clear();
     }
 
-    public Map<String, Object> getComponentConfiguration() {
-        Config conf = new Config();
-        int tickFrequencyInSeconds = 10;
-        conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequencyInSeconds);
-        return conf;
-    }
 
-
-    public void executeTuple(Tuple tuple) {
-        String filterId = tuple.getStringByField("filter_id");
-        String msg = tuple.getStringByField("msg");
-
-        // Append in-memory
-        if (!resultAggregator.containsKey(filterId)) {
-            resultAggregator.put(filterId, new ArrayList<String>());
-        }
-        resultAggregator.get(filterId).add(msg);
-
-        // Flush auto
-        if (resultAggregator.get(filterId).size() >= BATCH_SIZE) {
-            _flush();
-        }
-
-        // No ack, is handled in outer
-    }
-
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {
-    }
 }
