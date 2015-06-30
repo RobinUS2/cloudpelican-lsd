@@ -152,6 +152,14 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
             return;
         }
 
+        // Expiration
+        Date now = new Date();
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(now);
+        cal.add(Calendar.DAY_OF_MONTH, 7); // x days persistent, @todo configure
+        long expirationTime = cal.getTimeInMillis();
+        LOG.info("Expiration set to " + new Date(expirationTime).toString());
+
         // Table definition
         TableSchema schema = new TableSchema();
         List<TableFieldSchema> tableFieldSchema = new ArrayList<TableFieldSchema>();
@@ -161,12 +169,14 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         tableFieldSchema.add(schemaEntry);
         schema.setFields(tableFieldSchema);
 
+        // Table
         Table table = new Table();
         table.setSchema(schema);
         TableReference tableRef = new TableReference();
         tableRef.setDatasetId(datasetId);
         tableRef.setProjectId(projectId);
         tableRef.setTableId(name);
+        table.setExpirationTime(expirationTime);
         table.setTableReference(tableRef);
 
         // Create table
