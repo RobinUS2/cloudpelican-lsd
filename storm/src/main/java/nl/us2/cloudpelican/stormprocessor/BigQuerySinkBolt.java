@@ -17,6 +17,10 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.SecurityUtils;
 import com.google.api.services.bigquery.Bigquery;
+import com.google.api.services.bigquery.model.Table;
+import com.google.api.services.bigquery.model.TableFieldSchema;
+import com.google.api.services.bigquery.model.TableReference;
+import com.google.api.services.bigquery.model.TableSchema;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
@@ -31,10 +35,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  *
@@ -51,6 +53,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     private GoogleCredential googleCredential;
     private HttpTransport httpTransport;
     private Bigquery bigquery;
+    private HashMap<String, Boolean> preparedTablesCache;
 
     private static final String STORAGE_SCOPE = "https://www.googleapis.com/auth/bigquery";
 
@@ -105,22 +108,74 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         // BigQuery
         bigquery = new Bigquery.Builder(httpTransport, JSON_FACTORY, googleCredential).setApplicationName(Main.class.getSimpleName()).build();
 
-        // Test call
+        // Cache
+        preparedTablesCache = new HashMap<String, Boolean>();
+    }
+
+    protected void _flush() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
+            // Prepare target table
+            Date now = new Date();
+            String date = sdf.format(now);
+            String targetTable = kv.getKey() +"_results_" + date;
+            prepareTable(targetTable);
+
+            // Log lines for debug
+            LOG.info(kv.getValue().size() + " lines for " + kv.getKey());
+        }
+        resultAggregator.clear();
+    }
+
+    protected void prepareTable(String name) {
+        // From cache?
+        if (preparedTablesCache.containsKey(name)) {
+            return;
+        }
+        LOG.info("Preparing table " + name);
+
+        // Check table
         boolean tableExists = false;
         try {
-            bigquery.tables().get(projectId, datasetId, "results").executeUsingHead();
+            bigquery.tables().get(projectId, datasetId, name).executeUsingHead();
             tableExists = true;
         } catch (Exception e) {
             LOG.error("Failed to check table", e);
         }
-        LOG.info("Table exists " + String.valueOf(tableExists));
-    }
 
-    protected void _flush() {
-        for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
-            LOG.info(kv.getValue().size() + " lines for " + kv.getKey());
+        // Does the table exist?
+        if (tableExists) {
+            LOG.info("Table exists " + String.valueOf(tableExists));
+            preparedTablesCache.put(name, true);
+            // Done
+            return;
         }
-        resultAggregator.clear();
+
+        // Table definition
+        TableSchema schema = new TableSchema();
+        List<TableFieldSchema> tableFieldSchema = new ArrayList<TableFieldSchema>();
+        TableFieldSchema schemaEntry = new TableFieldSchema();
+        schemaEntry.setName("_raw");
+        schemaEntry.setType("STRING");
+        tableFieldSchema.add(schemaEntry);
+        schema.setFields(tableFieldSchema);
+
+        Table table = new Table();
+        table.setSchema(schema);
+        TableReference tableRef = new TableReference();
+        tableRef.setDatasetId(datasetId);
+        tableRef.setProjectId(projectId);
+        tableRef.setTableId(name);
+        table.setTableReference(tableRef);
+
+        // Create table
+        try {
+            bigquery.tables().insert(projectId, datasetId, table).execute();
+            LOG.info("Created table " + name);
+            preparedTablesCache.put(name, true);
+        } catch (Exception e) {
+            LOG.error("Failed to create table", e);
+        }
     }
 
 
