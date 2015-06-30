@@ -67,17 +67,9 @@ public class Main {
             argsMap.put("kafka_consumer_id", "default_cloudpelican_lsd_consumer");
         }
 
-        // Load full settings from file
+        // Settings object
         Settings settings = new Settings();
-        JsonObject settingsData;
-        if (argsMap.containsKey("conf_path")) {
-            String json = FileUtils.readFileToString(new File(argsMap.get("conf_path")));
-            JsonParser jp = new JsonParser();
-            settingsData = jp.parse(json).getAsJsonObject();
-        } else {
-            // Default empty
-            settingsData = new JsonObject();
-        }
+        JsonObject settingsData = new JsonObject();
 
         // Add light settings to json
         for (Map.Entry<String, String> kv : argsMap.entrySet()) {
@@ -116,6 +108,26 @@ public class Main {
         // Supervisor stats writer bolt
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
         builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+
+        // Sink
+        if (settings.get("sinks") != null) {
+            String[] sinkIds = settings.get("sinks").split(",");
+            for (String sinkId : sinkIds) {
+                // Type
+                String sinkType = settings.get("sinks." + sinkId + ".type");
+                // @todo Sink factory if we have multiple types
+                if (sinkType == null) {
+                    throw new Exception("Sink '" + sinkId + "' invalid");
+                } else if (sinkType.equalsIgnoreCase("bigquery")) {
+                    // Google BigQuery sink
+                    String sinkName = "sink_" + sinkType + "_" + sinkId;
+                    LOG.info("Setting up sink '" + sinkName + "'");
+                    builder.setBolt(sinkName, new BigQuerySinkBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                }  else {
+                    throw new Exception("Sink type '" + sinkType + "' not supported");
+                }
+            }
+        }
 
         // Debug on for testing
         Config conf = new Config();
