@@ -10,7 +10,13 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Tuple;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.SecurityUtils;
+import com.google.api.services.bigquery.Bigquery;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
@@ -22,9 +28,11 @@ import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,6 +48,13 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     private String serviceAccountId;
     private String pk12KeyBase64;
     private PrivateKey pk12;
+    private GoogleCredential googleCredential;
+    private HttpTransport httpTransport;
+    private Bigquery bigquery;
+
+    private static final String STORAGE_SCOPE = "https://www.googleapis.com/auth/bigquery";
+
+    private static JsonFactory JSON_FACTORY;
 
     public BigQuerySinkBolt(String sinkId, Settings settings) {
         super(sinkId, settings);
@@ -67,7 +82,38 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
 
     public void prepareSink(Map conf, TopologyContext context, OutputCollector collector) {
         isValid(); // Call isvalid to load key
-        LOG.info(pk12.getAlgorithm());
+
+        // Transport
+        try {
+            httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+        } catch (Exception e) {
+            LOG.error("Failed to init transport", e);
+            System.exit(1);
+        }
+
+        // JSON
+        JSON_FACTORY = JacksonFactory.getDefaultInstance();
+
+        // Build a service account credential.
+        googleCredential = new GoogleCredential.Builder().setTransport(httpTransport)
+                .setJsonFactory(JSON_FACTORY)
+                .setServiceAccountId(serviceAccountId)
+                .setServiceAccountScopes(Collections.singleton(STORAGE_SCOPE))
+                .setServiceAccountPrivateKey(pk12)
+                .build();
+
+        // BigQuery
+        bigquery = new Bigquery.Builder(httpTransport, JSON_FACTORY, googleCredential).setApplicationName(Main.class.getSimpleName()).build();
+
+        // Test call
+        boolean tableExists = false;
+        try {
+            bigquery.tables().get(projectId, datasetId, "results").executeUsingHead();
+            tableExists = true;
+        } catch (Exception e) {
+            LOG.error("Failed to check table", e);
+        }
+        LOG.info("Table exists " + String.valueOf(tableExists));
     }
 
     protected void _flush() {
