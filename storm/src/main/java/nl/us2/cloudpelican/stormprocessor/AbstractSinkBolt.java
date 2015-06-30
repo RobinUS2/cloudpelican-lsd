@@ -98,6 +98,10 @@ public class AbstractSinkBolt extends BaseRichBolt {
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
         _collector = collector;
         resultAggregator = new HashMap<String, ArrayList<String>>();
+        prepareSink(conf, context, collector);
+    }
+
+    public void prepareSink(Map conf, TopologyContext context, OutputCollector collector) {
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
