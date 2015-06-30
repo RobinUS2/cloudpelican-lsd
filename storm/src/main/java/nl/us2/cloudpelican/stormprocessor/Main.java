@@ -115,16 +115,25 @@ public class Main {
             for (String sinkId : sinkIds) {
                 // Type
                 String sinkType = settings.get("sinks." + sinkId + ".type");
+                AbstractSinkBolt sinkBolt = null;
                 // @todo Sink factory if we have multiple types
                 if (sinkType == null) {
                     throw new Exception("Sink '" + sinkId + "' invalid");
                 } else if (sinkType.equalsIgnoreCase("bigquery")) {
                     // Google BigQuery sink
-                    String sinkName = "sink_" + sinkType + "_" + sinkId;
-                    LOG.info("Setting up sink '" + sinkName + "'");
-                    builder.setBolt(sinkName, new BigQuerySinkBolt(sinkId, settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    sinkBolt = new BigQuerySinkBolt(sinkId, settings);
                 }  else {
                     throw new Exception("Sink type '" + sinkType + "' not supported");
+                }
+
+                // Add to topology
+                if (sinkBolt != null) {
+                    String sinkName = "sink_" + sinkType + "_" + sinkId;
+                    LOG.info("Setting up sink '" + sinkName + "'");
+                    if (!sinkBolt.isValid()) {
+                        LOG.error("Sink '" + sinkName + "' not valid");
+                    }
+                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }
             }
         }

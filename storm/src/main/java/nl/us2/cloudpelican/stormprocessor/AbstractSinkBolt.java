@@ -7,6 +7,8 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Tuple;
 import org.apache.commons.lang.NotImplementedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
 import java.util.ArrayList;
@@ -23,6 +25,8 @@ public class AbstractSinkBolt extends BaseRichBolt {
     protected String sinkId;
     protected Settings settings;
     protected int batchSize;
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractSinkBolt.class);
 
     public AbstractSinkBolt(String sinkId, Settings settings) {
         this.sinkId = sinkId;
@@ -44,11 +48,14 @@ public class AbstractSinkBolt extends BaseRichBolt {
     }
 
     public String getSinkVar(String k) {
-        return settings.get(_sinkVarPrefix(k));
+        return getSinkVarOrDefault(k, null);
     }
 
     public String getSinkVarOrDefault(String k, String d) {
-        return settings.getOrDefault(_sinkVarPrefix(k), d);
+        String pk = _sinkVarPrefix(k);
+        String val = settings.getOrDefault(pk, d);
+        LOG.info("Sink var: " + pk + "=" + val);
+        return val;
     }
 
     public boolean isValid() {

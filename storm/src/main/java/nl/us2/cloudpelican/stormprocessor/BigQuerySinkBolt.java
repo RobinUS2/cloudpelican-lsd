@@ -31,15 +31,17 @@ import java.util.Map;
 public class BigQuerySinkBolt extends AbstractSinkBolt {
 
     private static final Logger LOG = LoggerFactory.getLogger(BigQuerySinkBolt.class);
+    private String projectId;
+    private String datasetId;
 
     public BigQuerySinkBolt(String sinkId, Settings settings) {
         super(sinkId, settings);
     }
 
     public boolean isValid() {
-        // @todo validate
-        LOG.info(getSinkVar("project_id"));
-        return true;
+        projectId = getSinkVar("project_id").trim();
+        datasetId = getSinkVar("dataset_id").trim();
+        return !projectId.isEmpty() && !datasetId.isEmpty();
     }
 
     protected void _flush() {
