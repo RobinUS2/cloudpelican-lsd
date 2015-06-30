@@ -33,6 +33,8 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     private static final Logger LOG = LoggerFactory.getLogger(BigQuerySinkBolt.class);
     private String projectId;
     private String datasetId;
+    private String serviceAccountId;
+    private String pk12Key;
 
     public BigQuerySinkBolt(String sinkId, Settings settings) {
         super(sinkId, settings);
@@ -41,12 +43,15 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     public boolean isValid() {
         projectId = getSinkVar("project_id").trim();
         datasetId = getSinkVar("dataset_id").trim();
+        serviceAccountId = getSinkVar("service_account_id").trim();
+        pk12Key = getSinkVar("pk12base64").trim();
         return !projectId.isEmpty() && !datasetId.isEmpty();
     }
 
     protected void _flush() {
         for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
             LOG.info(kv.getValue().size() + " lines for " + kv.getKey());
+            LOG.info(projectId);
         }
         resultAggregator.clear();
     }
