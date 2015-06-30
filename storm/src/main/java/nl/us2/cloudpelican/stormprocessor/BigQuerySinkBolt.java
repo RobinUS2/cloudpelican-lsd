@@ -119,6 +119,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
             Date now = new Date();
             String date = sdf.format(now);
             String targetTable = kv.getKey() +"_results_" + date;
+            targetTable = targetTable.replace('-', '_');
             prepareTable(targetTable);
 
             // Log lines for debug
