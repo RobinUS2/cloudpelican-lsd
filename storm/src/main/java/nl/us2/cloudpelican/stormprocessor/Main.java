@@ -37,54 +37,56 @@ public class Main {
         }
 
         // Config
-        HashMap<String, String> lightSettings = new HashMap<String, String>();
+        HashMap<String, String> argsMap = new HashMap<String, String>();
         for (String arg : argList) {
             String[] split = arg.split("=", 2);
             if (split.length == 2 && split[0].trim().length() > 0 && split[1].trim().length() > 0) {
                 if (split[0].equals("-zookeeper")) {
-                    lightSettings.put("zookeeper_nodes", split[1]);
+                    argsMap.put("zookeeper_nodes", split[1]);
                 } else if (split[0].equals("-grep")) {
-                    lightSettings.put("match_regex", split[1]);
+                    argsMap.put("match_regex", split[1]);
                 } else if (split[0].equals("-topic")) {
-                    lightSettings.put("kafka_topic", split[1]);
+                    argsMap.put("kafka_topic", split[1]);
                 } else if (split[0].equals("-supervisor-host")) {
-                    lightSettings.put("supervisor_host", split[1]);
+                    argsMap.put("supervisor_host", split[1]);
                 } else if (split[0].equals("-supervisor-username")) {
-                    lightSettings.put("supervisor_username", split[1]);
+                    argsMap.put("supervisor_username", split[1]);
                 } else if (split[0].equals("-supervisor-password")) {
-                    lightSettings.put("supervisor_password", split[1]);
+                    argsMap.put("supervisor_password", split[1]);
                 } else if (split[0].equals("-conf")) {
-                    lightSettings.put("conf_path", split[1]);
+                    argsMap.put("conf_path", split[1]);
                 } else if (split[0].startsWith("-")) {
                     // Default
-                    lightSettings.put(split[0].substring(1), split[1]);
+                    argsMap.put(split[0].substring(1), split[1]);
                 }
             }
         }
 
         // Default settings
-        if (!lightSettings.containsKey("kafka_consumer_id")) {
-            lightSettings.put("kafka_consumer_id", "default_cloudpelican_lsd_consumer");
+        if (!argsMap.containsKey("kafka_consumer_id")) {
+            argsMap.put("kafka_consumer_id", "default_cloudpelican_lsd_consumer");
         }
 
         // Load full settings from file
-        JsonObject settings;
-        if (lightSettings.containsKey("conf_path")) {
-            String json = FileUtils.readFileToString(new File(lightSettings.get("conf_path")));
+        Settings settings = new Settings();
+        JsonObject settingsData;
+        if (argsMap.containsKey("conf_path")) {
+            String json = FileUtils.readFileToString(new File(argsMap.get("conf_path")));
             JsonParser jp = new JsonParser();
-            settings = jp.parse(json).getAsJsonObject();
+            settingsData = jp.parse(json).getAsJsonObject();
         } else {
             // Default empty
-            settings = new JsonObject();
+            settingsData = new JsonObject();
         }
 
         // Add light settings to json
-        for (Map.Entry<String, String> kv : lightSettings.entrySet()) {
-            settings.addProperty(kv.getKey(), kv.getValue());
+        for (Map.Entry<String, String> kv : argsMap.entrySet()) {
+            settingsData.addProperty(kv.getKey(), kv.getValue());
         }
 
-        // Debug
-        LOG.info(settings.toString());
+        // Debug & load
+        LOG.info(settingsData.toString());
+        settings.load(settingsData);
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
@@ -95,30 +97,30 @@ public class Main {
 
         // Read from kafka
 
-        BrokerHosts hosts = new ZkHosts(lightSettings.get("zookeeper_nodes"));
-        SpoutConfig spoutConfig = new SpoutConfig(hosts, lightSettings.get("kafka_topic"), "/" + lightSettings.get("kafka_topic"), lightSettings.get("kafka_consumer_id"));
+        BrokerHosts hosts = new ZkHosts(settings.get("zookeeper_nodes"));
+        SpoutConfig spoutConfig = new SpoutConfig(hosts, settings.get("kafka_topic"), "/" + settings.get("kafka_topic"), settings.get("kafka_consumer_id"));
         spoutConfig.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
         KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(lightSettings), globalConcurrency * 8).localOrShuffleGrouping(KAFKA_SPOUT);
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 8).localOrShuffleGrouping(KAFKA_SPOUT);
 
         // Error classifier bolt
-        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(lightSettings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor result writer bolt
-        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(lightSettings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor stats writer bolt
-        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(lightSettings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
-        builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(lightSettings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
 
         // Debug on for testing
         Config conf = new Config();
         conf.setDebug(false);
-        String topologyName = lightSettings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
+        String topologyName = settings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
         if (argList.contains("-submit")) {
             conf.setNumWorkers(globalConcurrency);
             conf.setNumAckers(globalConcurrency);

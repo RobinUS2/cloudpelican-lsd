@@ -33,7 +33,7 @@ import java.util.*;
 public class ErrorClassifierBolt extends BaseRichBolt {
 
     OutputCollector _collector;
-    private HashMap<String, String> settings;
+    private Settings settings;
     private HashMap<String, Classifier<String, String>> classifiers;
     private String[] errorWords;
     public static String CLASSIFY_ERROR = "error";
@@ -41,7 +41,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
 
     private static final Logger LOG = LoggerFactory.getLogger(ErrorClassifierBolt.class);
 
-    public ErrorClassifierBolt(HashMap<String, String> settings) {
+    public ErrorClassifierBolt(Settings settings) {
         super();
         this.settings = settings;
         this.classifiers = new HashMap<String, Classifier<String, String>>();

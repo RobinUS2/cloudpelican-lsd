@@ -32,11 +32,11 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
 
     OutputCollector _collector;
     HashMap<String, ArrayList<String>> resultAggregator;
-    private HashMap<String, String> settings;
+    private Settings settings;
 
     private static final Logger LOG = LoggerFactory.getLogger(SupervisorResultWriterBolt.class);
 
-    public SupervisorResultWriterBolt(HashMap<String, String> settings) {
+    public SupervisorResultWriterBolt(Settings settings) {
         super();
         this.settings = settings;
     }

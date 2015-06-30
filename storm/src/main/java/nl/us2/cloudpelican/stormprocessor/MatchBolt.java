@@ -42,11 +42,11 @@ public class MatchBolt extends BaseRichBolt {
     JsonParser jsonParser;
     private boolean localMode = false;
     private String regex;
-    private HashMap<String, String> settings;
+    private Settings settings;
 
     private static final Logger LOG = LoggerFactory.getLogger(MatchBolt.class);
 
-    public MatchBolt(HashMap<String, String> settings) {
+    public MatchBolt(Settings settings) {
         super();
         filters = null;
         this.settings = settings;

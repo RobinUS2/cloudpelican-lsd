@@ -31,11 +31,11 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
 
     OutputCollector _collector;
     HashMap<String, SupervisorFilterStats> resultAggregator;
-    private HashMap<String, String> settings;
+    private Settings settings;
 
     private static final Logger LOG = LoggerFactory.getLogger(SupervisorStatsWriterBolt.class);
 
-    public SupervisorStatsWriterBolt(HashMap<String, String> settings) {
+    public SupervisorStatsWriterBolt(Settings settings) {
         super();
         this.settings = settings;
     }
