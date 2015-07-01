@@ -26,7 +26,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         // Parse params
         JsonParser jp = new JsonParser();
-        JsonObject settings = jp.parse(args[0]).getAsJsonObject();
+        JsonObject settings = jp.parse(new String(Base64.decodeBase64(args[0].getBytes()))).getAsJsonObject();
 
         String projectId = settings.get("project_id").getAsString();
         String datasetId = settings.get("dataset_id").getAsString();
