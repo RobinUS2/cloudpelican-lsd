@@ -189,7 +189,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         TableFieldSchema schemaEntryLabel = new TableFieldSchema();
         schemaEntryLabel.setName("label");
         schemaEntryLabel.setType("STRING");
-        tableFieldSchema.add(schemaEntryMsg);
+        tableFieldSchema.add(schemaEntryLabel);
 
         TableFieldSchema schemaEntryHost = new TableFieldSchema();
         schemaEntryHost.setName("host");
@@ -197,7 +197,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         tableFieldSchema.add(schemaEntryHost);
 
         TableFieldSchema schemaEntryTime = new TableFieldSchema();
-        schemaEntryTime.setName("ts");
+        schemaEntryTime.setName("timestamp");
         schemaEntryTime.setType("TIMESTAMP");
         tableFieldSchema.add(schemaEntryTime);
 
