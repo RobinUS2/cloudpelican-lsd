@@ -32,7 +32,6 @@ public class Main {
         JsonObject settings = jp.parse(new String(Base64.decodeBase64(args[0].getBytes()))).getAsJsonObject();
 
         String projectId = settings.get("project_id").getAsString();
-        String datasetId = settings.get("dataset_id").getAsString();
         String serviceAccountId = settings.get("service_account_id").getAsString();
         String pk12KeyBase64 = settings.get("pk12base64").getAsString();
 
@@ -45,6 +44,7 @@ public class Main {
             LOG.info("Loaded PK12 key");
         } catch (Exception e) {
             LOG.info(e.getMessage());
+            System.exit(1);
             e.printStackTrace();
             return;
         }
@@ -56,6 +56,7 @@ public class Main {
         } catch (Exception e) {
             LOG.info(e.getMessage());
             e.printStackTrace();
+            System.exit(1);
             return;
         }
 
@@ -96,7 +97,7 @@ public class Main {
      */
     public static JobReference startQuery(Bigquery bigquery, String projectId,
                                           String querySql) throws IOException {
-        System.out.format("\nInserting Query Job: %s\n", querySql);
+        System.err.format("\nInserting Query Job: %s\n", querySql);
 
         Job job = new Job();
         JobConfiguration config = new JobConfiguration();
@@ -110,7 +111,7 @@ public class Main {
         insert.setProjectId(projectId);
         JobReference jobId = insert.execute().getJobReference();
 
-        System.out.format("\nJob ID of Query Job is: %s\n", jobId.getJobId());
+        System.err.format("\nJob ID of Query Job is: %s\n", jobId.getJobId());
 
         return jobId;
     }
@@ -134,7 +135,7 @@ public class Main {
         while (true) {
             Job pollJob = bigquery.jobs().get(projectId, jobId.getJobId()).execute();
             elapsedTime = System.currentTimeMillis() - startTime;
-            System.out.format("Job status (%dms) %s: %s\n", elapsedTime,
+            System.err.format("Job status (%dms) %s: %s\n", elapsedTime,
                     jobId.getJobId(), pollJob.getStatus().getState());
             if (pollJob.getStatus().getState().equals("DONE")) {
                 return pollJob;
@@ -165,10 +166,10 @@ public class Main {
                                 .getJobId()
                 ).execute();
         List<TableRow> rows = queryResult.getRows();
-        System.out.print("\nQuery Results:\n------------\n");
+        System.err.print("\nQuery Results:\n------------\n");
         for (TableRow row : rows) {
             for (TableCell field : row.getF()) {
-                System.out.printf("%-50s", field.getV());
+                System.out.printf("%s\t", field.getV());
             }
             System.out.println();
         }
