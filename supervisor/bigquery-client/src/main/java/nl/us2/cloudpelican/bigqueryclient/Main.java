@@ -3,6 +3,7 @@ package nl.us2.cloudpelican.bigqueryclient;
 import java.io.ByteArrayInputStream;
 import java.security.PrivateKey;
 import java.util.Collections;
+import java.util.List;
 import java.util.logging.Logger;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -12,6 +13,7 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.SecurityUtils;
 import com.google.api.services.bigquery.Bigquery;
+import com.google.api.services.bigquery.model.TableList;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.codec.binary.Base64;
@@ -69,5 +71,11 @@ public class Main {
 
         // BigQuery
         Bigquery bigquery = new Bigquery.Builder(httpTransport, JSON_FACTORY, googleCredential).setApplicationName(Main.class.getSimpleName()).build();
+
+        // List tables
+        List<TableList.Tables> tables = bigquery.tables().list(projectId, datasetId).execute().getTables();
+        for (TableList.Tables t : tables) {
+            LOG.info("Table: " + t.getId());
+        }
     }
 }
