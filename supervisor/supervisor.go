@@ -16,6 +16,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -63,10 +65,71 @@ func main() {
 	router.GET("/filter", GetFilter)                               // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)                     // Delete a filter
 	router.DELETE("/admin/truncate/outliers", DeleteAdminOutliers) // Delete outliers
+	router.POST("/bigquery/query", PostBigQueryExecute)            // Execute a query on bigquery, NOT JSON, response is TSV
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+}
+
+// This is not a JSON response
+func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+
+	// Details
+	bodyBytes, bodyErr := ioutil.ReadAll(r.Body)
+	var bodyStr string = ""
+	if bodyErr == nil {
+		bodyStr = string(bodyBytes)
+	}
+	log.Printf("BigQuery: %s", bodyStr)
+
+	// Marshal JSON
+	jsonData := make(map[string]string)
+	jsonData["project_id"] = "gentle-cinema-93806"
+	jsonData["dataset_id"] = "cloudpelican_lsd_v1"
+	jsonData["service_account_id"] = "744853385062-oa28bu5k51v8eufqkbcthn2f03scjnev@developer.gserviceaccount.com"
+	keyFile := "/Users/robin/Documents/35160026a228.p12"
+	keyBytes, keyErr := ioutil.ReadFile(keyFile)
+	if keyErr != nil {
+		log.Printf("ERR: Unable to read key from %s", keyFile)
+		return
+	}
+	jsonData["pk12base64"] = base64.StdEncoding.EncodeToString(keyBytes)
+	jsonData["query"] = bodyStr
+	jsonBytes, _ := json.Marshal(jsonData)
+	log.Printf("%s", jsonBytes)
+
+	// Build base64 args
+	base64Args := base64.StdEncoding.EncodeToString(jsonBytes)
+
+	// Args
+	args := make([]string, 0)
+	args = append(args, "-jar")
+	args = append(args, "bigquery-client/target/bigquery-client-0.1-jar-with-dependencies.jar")
+	args = append(args, base64Args)
+
+	// Assemble JSON
+	cmd := exec.Command("java", args...)
+	cmd.Stderr = os.Stdout // Map the stdErr of the process to stdout as this is debug data
+	stdout, _ := cmd.StdoutPipe()
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Waiting for command to finish...")
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		fmt.Fprintln(w, scanner.Text())
+	}
+	err = cmd.Wait()
+	if err != nil {
+		log.Printf("Command finished with error: %v", err)
+	} else {
+		log.Printf("Command finished")
+	}
 }
 
 func DeleteAdminOutliers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
