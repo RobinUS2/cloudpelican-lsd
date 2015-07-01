@@ -73,7 +73,8 @@ func newConf(path string) *Conf {
 	if len(path) < 1 {
 		if _, err := os.Stat(DEFAULT_CONF_PATH); err != nil {
 			if os.IsExist(err) {
-				confPath = DEFAULT_CONF_PATH
+				path = DEFAULT_CONF_PATH
+				confPath = path
 			}
 		}
 	}
