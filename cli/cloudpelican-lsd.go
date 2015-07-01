@@ -257,17 +257,24 @@ func _handleConsole(input string) bool {
 
 func search(q string) {
 	// Smart query builder
-	log.Println(q)
+	q = strings.ToLower(q)
 	fromRegex := regexp.MustCompile("(?i)from([ ]+)[a-z0-9_]+")
 	fromMatch := fromRegex.FindString(q)
 	if len(fromMatch) > 0 {
 		fromSplit := strings.SplitN(fromMatch, " ", 2)
 		if len(fromSplit) >= 2 {
-			log.Println(fromSplit[1])
-			newTable := ""
-			q = strings.Replace(q, fromMatch, fmt.Sprintf("from %s", newTable), 1)
+			filter, _ := supervisorCon.FilterByName(fromSplit[1])
+			if filter != nil {
+				t := time.Now()
+				date := t.Format("2006_01_02")
+				newTable := fmt.Sprintf("cloudpelican_lsd_v1.%s_results_%s_v%d", strings.Replace(filter.Id, "-", "_", -1), date, 1) // @todo configure bigquery dataset and table version
+				q = strings.Replace(q, fromMatch, fmt.Sprintf("from %s", newTable), 1)
+			}
 		}
 	}
+
+	// Select * for now to fixed columns
+	q = strings.Replace(q, "select *", "select _raw", 1)
 
 	// Execute
 	data, err := supervisorCon.Search(q)
