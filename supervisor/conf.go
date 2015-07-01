@@ -22,6 +22,7 @@ func (c *Conf) Set(k string, v string) {
 	c.dataMux.Lock()
 	defer c.dataMux.Unlock()
 	c.data[k] = v
+	log.Printf("Set conf %s=%s", k, v)
 }
 
 func (c *Conf) Save() bool {
@@ -32,6 +33,10 @@ func (c *Conf) Save() bool {
 		log.Printf("Failed saving conf: %s", je)
 		return false
 	}
+	if len(confPath) < 1 {
+		confPath = "/etc/cloudpelican_supervisor.conf"
+	}
+	log.Printf("Writing conf to %s", confPath)
 	we := ioutil.WriteFile(confPath, b, 0600)
 	if we != nil {
 		log.Printf("Failed saving conf: %s", we)
