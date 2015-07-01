@@ -4,12 +4,8 @@ package nl.us2.cloudpelican.stormprocessor;
  * Created by robin on 07/06/15.
  */
 
-import backtype.storm.Config;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.topology.base.BaseRichBolt;
-import backtype.storm.tuple.Tuple;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
@@ -19,18 +15,10 @@ import com.google.api.client.util.SecurityUtils;
 import com.google.api.services.bigquery.Bigquery;
 import com.google.api.services.bigquery.model.*;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.storm.http.HttpResponse;
-import org.apache.storm.http.client.HttpClient;
-import org.apache.storm.http.client.methods.HttpPut;
-import org.apache.storm.http.entity.StringEntity;
-import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import storm.starter.util.TupleHelpers;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.security.PrivateKey;
 import java.text.SimpleDateFormat;
 import java.util.*;

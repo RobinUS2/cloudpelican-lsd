@@ -102,12 +102,44 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>nl.us2.timeseriesoutlierdetection</groupId>
+            <artifactId>timeseriesoutlierdetection</artifactId>
+            <version>0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5</version>
+        </dependency>
     </dependencies>
 
     <repositories>
         <repository>
             <id>google-api-services</id>
             <url>http://google-api-client-libraries.appspot.com/mavenrepo</url>
+        </repository>
+        <repository>
+            <id>timeseries-outlier-detection-mvn-repo</id>
+            <url>https://raw.github.com/RobinUS2/timeseries-outlier-detection/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
         </repository>
     </repositories>
 

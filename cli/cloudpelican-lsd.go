@@ -92,10 +92,11 @@ func startConsole() {
 	CONSOLE_KEYWORDS["history"] = true
 	CONSOLE_KEYWORDS["show filters"] = true
 
-	CONSOLE_KEYWORDS_OPTS["connect"] = 2 // connect + uri
-	CONSOLE_KEYWORDS_OPTS["tail"] = 2    // tail + filter name
-	CONSOLE_KEYWORDS_OPTS["auth"] = 3    // auth + usr + pwd
-	CONSOLE_KEYWORDS_OPTS["stats"] = 2   // stats + filter name
+	CONSOLE_KEYWORDS_OPTS["connect"] = 2         // connect + uri
+	CONSOLE_KEYWORDS_OPTS["tail"] = 2            // tail + filter name
+	CONSOLE_KEYWORDS_OPTS["auth"] = 3            // auth + usr + pwd
+	CONSOLE_KEYWORDS_OPTS["stats"] = 2           // stats + filter name
+	CONSOLE_KEYWORDS_OPTS["describe filter"] = 3 // describe filter + filter name
 
 	// Console reader
 	term, _ = terminal.NewWithStdInOut()
@@ -216,6 +217,14 @@ func _handleConsole(input string) bool {
 		}
 		getStats(split[1])
 		return false
+	} else if strings.Index(inputLower, "describe filter ") == 0 {
+		split := strings.SplitN(input, "describe filter ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return false
+		}
+		describeFilter(split[1])
+		return false
 	} else if strings.Index(inputLower, "auth ") == 0 {
 		split := strings.Split(input, " ")
 		if len(split) != 3 {
@@ -244,7 +253,7 @@ func createFilter(input string) {
 		// Very simple parsing
 		if previousToken == "filter" && tokens[i-2] == "create" {
 			// Filter name
-			filterName = token
+			filterName = strings.TrimSpace(token)
 		} else if previousToken == "as" {
 			regex = strings.TrimRight(strings.TrimLeft(token, "'"), "'")
 		}
@@ -253,6 +262,10 @@ func createFilter(input string) {
 	// Filter name
 	if len(filterName) < 1 {
 		printConsoleError(fmt.Sprintf("You must provide a filter name", filterName))
+		return
+	}
+	if isUuid(filterName) {
+		printConsoleError(fmt.Sprintf("Filter name can not be in form of a UUID", filterName))
 		return
 	}
 
@@ -539,11 +552,24 @@ func intFromTimeStr(input string, def int64) (int64, error) {
 	return val, nil
 }
 
+func describeFilter(filterName string) {
+	// Get filter
+	filter, filterE := supervisorCon.FilterByName(filterName)
+	if filterE != nil {
+		printConsoleError("Filter not found")
+		return
+	}
+	fmt.Printf("NAME:\n%s\n\n", filter.Name)
+	fmt.Printf("ID:\n%s\n\n", filter.Id)
+	fmt.Printf("REGEX:\n%s\n\n", filter.Regex)
+}
+
 func getStats(input string) {
 	// Basic parsing
 	var filterName string = ""
 	var windowStr string = ""
 	var rollupStr string = ""
+	var flags map[string]bool = make(map[string]bool)
 	tokens := strings.Split(input, " ")
 	for i, token := range tokens {
 		var previousToken string = ""
@@ -561,6 +587,13 @@ func getStats(input string) {
 		} else if previousToken == "rollup" {
 			// Rollup (e.g. minutely, hourly)
 			rollupStr = token
+		}
+
+		// Flags
+		if token == "-regular" {
+			flags["hide_regular"] = true
+		} else if token == "-error" || token == "-errors" {
+			flags["hide_error"] = true
 		}
 	}
 
@@ -594,7 +627,7 @@ func getStats(input string) {
 	clearConsole()
 
 	// Render chart
-	chart, chartE := stats.RenderChart(filter, data)
+	chart, chartE := stats.RenderChart(filter, data, flags)
 	if chartE != nil {
 		printConsoleError(fmt.Sprintf("%s", chartE))
 		return

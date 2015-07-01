@@ -16,11 +16,12 @@ import (
 )
 
 type FilterManager struct {
-	db               *bolt.DB
-	filterTable      string
-	filterResults    map[string][]string
-	filterStatsTable string
-	filterStats      map[string]*FilterStats
+	db                  *bolt.DB
+	filterTable         string
+	filterResults       map[string][]string
+	filterStatsTable    string
+	filterStats         map[string]*FilterStats
+	filterOutliersTable string
 }
 
 type FilterStats struct {
@@ -145,6 +146,92 @@ func (f *Filter) GetStats() *FilterStats {
 	return f.Stats
 }
 
+type Outlier struct {
+	FilterId  string  `json:"filter_id"`
+	Score     float64 `json:"score"`
+	Timestamp int64   `json:"timestamp"`
+	Details   string  `json:"details"`
+}
+
+// Remove all outliers
+func (fm *FilterManager) TruncateOutliers() bool {
+	log.Println("Truncating outliers")
+
+	keys := make([]string, 0)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	fm.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterOutliersTable))
+		c := b.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			keys = append(keys, fmt.Sprintf("%s", k))
+		}
+		wg.Done()
+		return nil
+	})
+	wg.Wait()
+
+	// Remove keys
+	var wgrm sync.WaitGroup
+	deleteCount := 0
+	for _, key := range keys {
+		wgrm.Add(1)
+		// Remove key
+		fm.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(fm.filterOutliersTable))
+			err := b.Delete([]byte(key))
+			if err != nil {
+				log.Printf("Failed to remove outlier: %s", err)
+			}
+			deleteCount++
+			wgrm.Done()
+			return nil
+		})
+		wgrm.Wait()
+	}
+	log.Printf("Removed %d outliers", deleteCount)
+
+	return true
+}
+
+// Store outlier
+func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
+	// ID
+	var id string = uuid.New()
+
+	// Struct
+	outlier := &Outlier{}
+	outlier.FilterId = f.Id
+	outlier.Timestamp = ts
+	outlier.Score = score
+	outlier.Details = details
+
+	// To JSON
+	json, jsonErr := json.Marshal(outlier)
+	if jsonErr != nil {
+		log.Printf("Failed to marshal to json: %s", jsonErr)
+		return false
+	}
+
+	// Create
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var err error = nil
+	filterManager.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(filterManager.filterOutliersTable))
+		// f-<filterid> prefix to allow prefix scans
+		err = b.Put([]byte(fmt.Sprintf("f-%s-%s", f.Id, id)), []byte(json))
+		if err != nil {
+			log.Printf("Failed to create outlier %s", err)
+		}
+		wg.Done()
+		return err
+	})
+	wg.Wait()
+	return err == nil
+}
+
 // @todo Support multiple adapters for storage of results, currently only in memory
 func (f *Filter) AddResults(res []string) bool {
 	f.resultsMux.Lock()
@@ -201,6 +288,15 @@ func (fm *FilterManager) Open() {
 	wg.Add(1)
 	fm.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterStatsTable))
+		if err != nil {
+			log.Fatal(fmt.Errorf("create bucket: %s", err))
+		}
+		wg.Done()
+		return nil
+	})
+	wg.Add(1)
+	fm.db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte(fm.filterOutliersTable))
 		if err != nil {
 			log.Fatal(fmt.Errorf("create bucket: %s", err))
 		}
@@ -394,10 +490,11 @@ func filterFromJson(b []byte) *Filter {
 // Init the filter manager
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:      "filters",
-		filterStatsTable: "filter_stats",
-		filterResults:    make(map[string][]string),
-		filterStats:      make(map[string]*FilterStats),
+		filterTable:         "filters",
+		filterStatsTable:    "filter_stats",
+		filterOutliersTable: "filter_outliers",
+		filterResults:       make(map[string][]string),
+		filterStats:         make(map[string]*FilterStats),
 	}
 	fm.Open()
 	fm.TimeseriesCleaner()

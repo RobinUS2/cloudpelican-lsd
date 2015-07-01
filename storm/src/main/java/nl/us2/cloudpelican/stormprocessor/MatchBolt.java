@@ -25,10 +25,12 @@ import org.apache.storm.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
+
 import static backtype.storm.utils.Utils.DEFAULT_STREAM_ID;
 
 /**
@@ -84,6 +86,13 @@ public class MatchBolt extends BaseRichBolt {
 
     public void executeTick() {
         loadFilters();
+        dispatchOutlierChecks();
+    }
+
+    protected void dispatchOutlierChecks() {
+        for (Filter filter : getFilters().values()) {
+            _collector.emit("dispatch_outlier_checks", new Values(filter.Id()));
+        }
     }
 
     protected void loadFilters() {
@@ -173,5 +182,6 @@ public class MatchBolt extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("filter_id", "msg"));
         declarer.declareStream("match_stats", new Fields("filter_id", "metric", "increment"));
+        declarer.declareStream("dispatch_outlier_checks", new Fields("filter_id"));
     }
 }

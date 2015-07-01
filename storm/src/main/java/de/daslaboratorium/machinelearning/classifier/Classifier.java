@@ -1,12 +1,6 @@
 package de.daslaboratorium.machinelearning.classifier;
 
-import java.util.Collection;
-import java.util.Dictionary;
-import java.util.Enumeration;
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Abstract base extended by any concrete classifier.  It implements the basic

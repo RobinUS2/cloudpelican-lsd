@@ -4,7 +4,6 @@ package nl.us2.cloudpelican.stormprocessor;
  * Created by robin on 07/06/15.
  */
 
-import backtype.storm.Config;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
@@ -14,17 +13,13 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import de.daslaboratorium.machinelearning.classifier.BayesClassifier;
 import de.daslaboratorium.machinelearning.classifier.Classifier;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.storm.http.HttpResponse;
-import org.apache.storm.http.client.HttpClient;
-import org.apache.storm.http.client.methods.HttpPut;
-import org.apache.storm.http.entity.StringEntity;
-import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import storm.starter.util.TupleHelpers;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -35,9 +30,11 @@ public class ErrorClassifierBolt extends BaseRichBolt {
     OutputCollector _collector;
     private Settings settings;
     private HashMap<String, Classifier<String, String>> classifiers;
+    private HashMap<String, Long> samplesTrained;
     private String[] errorWords;
-    public static String CLASSIFY_ERROR = "error";
-    public static String CLASSIFY_REGULAR = "regular";
+    public static final String CLASSIFY_ERROR = "error";
+    public static final String CLASSIFY_REGULAR = "regular";
+    public static final long MIN_TRAIN_COUNT = 100L;
 
     private static final Logger LOG = LoggerFactory.getLogger(ErrorClassifierBolt.class);
 
@@ -45,6 +42,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         super();
         this.settings = settings;
         this.classifiers = new HashMap<String, Classifier<String, String>>();
+        this.samplesTrained = new HashMap<String, Long>();
         this.errorWords = ("err;error;fail;failed;failure;timed out;exception;unexpected;not found;unauthorized;not authorized;missing;reject;rejected;drop;dropped;warn;warning;crit;critical;fatal;emerg;emergency;alert;404").split(";");
     }
 
@@ -60,6 +58,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         // Get classifier
         if (!classifiers.containsKey(filterId)) {
             classifiers.put(filterId, new BayesClassifier<String, String>());
+            samplesTrained.put(filterId, 0L);
         }
 
         // Word in blacklist?
@@ -83,8 +82,12 @@ public class ErrorClassifierBolt extends BaseRichBolt {
             classifiers.get(filterId).learn(CLASSIFY_REGULAR, msgTokens);
         }
 
+        // Increment samples trained
+        long trainCount = samplesTrained.get(filterId);
+        samplesTrained.put(filterId, trainCount + 1L);
+
         // Match?
-        if (classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
+        if (trainCount >= MIN_TRAIN_COUNT && classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
             LOG.debug("Classified as error: " + msg);
             _collector.emit("error_stats", new Values(filterId, MetricsEnum.ERRROR.getMask(), 1L)); // Counters
         }

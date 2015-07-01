@@ -54,17 +54,30 @@ func main() {
 	router.GET("/ping", GetPing)
 
 	// Filters
-	router.POST("/filter", PostFilter)                // Create new filter
-	router.GET("/filter/:id/result", GetFilterResult) // Get results of a single filter
-	router.GET("/filter/:id/stats", GetFilterStats)   // Get stats of a single filter
-	router.PUT("/filter/:id/result", PutFilterResult) // Store new results into a filter
-	router.PUT("/stats/filters", PutStatsFilters)     // Store new statistics around filters
-	router.GET("/filter", GetFilter)                  // Get all filters
-	router.DELETE("/filter/:id", DeleteFilter)        // Delete a filter
+	router.POST("/filter", PostFilter)                             // Create new filter
+	router.GET("/filter/:id/result", GetFilterResult)              // Get results of a single filter
+	router.GET("/filter/:id/stats", GetFilterStats)                // Get stats of a single filter
+	router.PUT("/filter/:id/result", PutFilterResult)              // Store new results into a filter
+	router.POST("/filter/:id/outlier", PostFilterOutlier)          // Create new record of a detected outlier
+	router.PUT("/stats/filters", PutStatsFilters)                  // Store new statistics around filters
+	router.GET("/filter", GetFilter)                               // Get all filters
+	router.DELETE("/filter/:id", DeleteFilter)                     // Delete a filter
+	router.DELETE("/admin/truncate/outliers", DeleteAdminOutliers) // Delete outliers
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+}
+
+func DeleteAdminOutliers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	res := filterManager.TruncateOutliers()
+	jresp.Set("truncated", res)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
 }
 
 func GetPing(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -185,11 +198,78 @@ func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	fmt.Fprint(w, jresp.ToString(false))
 }
 
+func PostFilterOutlier(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+
+	// Get filter
+	id := strings.TrimSpace(ps.ByName("id"))
+	if len(id) < 1 {
+		jresp.Error("Please provide an ID")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	filter := filterManager.GetFilter(id)
+	if filter == nil {
+		jresp.Error(fmt.Sprintf("Filter %s not found", id))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+
+	// Timestamp
+	timestamp := strings.TrimSpace(r.URL.Query().Get("timestamp"))
+	if len(timestamp) < 1 {
+		jresp.Error("Please provide a timestamp")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	ts, tsErr := strconv.ParseInt(timestamp, 10, 0)
+	if tsErr != nil {
+		jresp.Error(fmt.Sprintf("Please provide a valid timestamp: %s", tsErr))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+
+	// Score
+	score := strings.TrimSpace(r.URL.Query().Get("score"))
+	if len(score) < 1 {
+		jresp.Error("Please provide a score")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	scoreVal, scoreErr := strconv.ParseFloat(score, 64)
+	if scoreErr != nil {
+		jresp.Error(fmt.Sprintf("Please provide a valid score: %s", scoreErr))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+
+	// Details
+	bodyBytes, bodyErr := ioutil.ReadAll(r.Body)
+	var details string = ""
+	if bodyErr == nil {
+		details = string(bodyBytes)
+	}
+
+	// Create outlier
+	log.Printf("Filter %s outlier at ts %d score %f details %s", filter.Id, ts, scoreVal, details)
+	res := filter.AddOutlier(ts, scoreVal, details)
+	jresp.Set("ack", res)
+
+	// Done
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
 func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if !basicAuth(w, r) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
+
+	// Get filter
 	id := strings.TrimSpace(ps.ByName("id"))
 	if len(id) < 1 {
 		jresp.Error("Please provide an ID")

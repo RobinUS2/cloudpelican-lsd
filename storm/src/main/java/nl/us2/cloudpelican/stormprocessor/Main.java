@@ -1,20 +1,20 @@
 package nl.us2.cloudpelican.stormprocessor;
 
-import backtype.storm.tuple.Fields;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import storm.kafka.*;
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
 import backtype.storm.StormSubmitter;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
+import backtype.storm.tuple.Fields;
+import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import storm.kafka.*;
 
-import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * Created by robin on 07/06/15.
@@ -26,6 +26,9 @@ public class Main {
     public static String SUPERVISOR_STATS_WRITER = "supervisor_stats_writer";
     public static String SUPERVISOR_ERROR_STATS_WRITER = "supervisor_error_stats_writer";
     public static String ERROR_CLASSIFIER_BOLT = "error_classifier";
+    public static String OUTLIER_DETECTION = "outlier_detection";
+    public static String OUTLIER_COLLECTOR = "outlier_collector";
+
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
@@ -108,6 +111,10 @@ public class Main {
         // Supervisor stats writer bolt
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
         builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+
+        // Outlier detection bolts (sharded by filter ID)
+        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+        builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), globalConcurrency * 1).shuffleGrouping(OUTLIER_DETECTION, "outliers");
 
         // Sink
         if (settings.get("sinks") != null) {
