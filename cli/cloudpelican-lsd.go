@@ -210,6 +210,14 @@ func _handleConsole(input string) bool {
 		}
 		executeSelect(fmt.Sprintf("select * from %s", split[1]))
 		return true
+	} else if strings.Index(inputLower, "search ") == 0 {
+		split := strings.SplitN(input, "search ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return false
+		}
+		search(split[1])
+		return true
 	} else if strings.Index(inputLower, "stats ") == 0 {
 		split := strings.SplitN(input, "stats ", 2)
 		if len(split) < 2 {
@@ -245,6 +253,15 @@ func _handleConsole(input string) bool {
 		printConsoleError(input)
 	}
 	return false
+}
+
+func search(q string) {
+	data, err := supervisorCon.Search(q)
+	if err != nil {
+		printConsoleError(fmt.Sprintf("Search failed '%s'", err))
+		return
+	}
+	fmt.Print(data)
 }
 
 func configureSupervisor(kv string) {

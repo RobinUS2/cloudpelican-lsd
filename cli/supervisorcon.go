@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -106,6 +107,12 @@ func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, 
 	}
 
 	return res, nil
+}
+
+func (s *SupervisorCon) Search(q string) (string, error) {
+	// @todo setting to configure default search backend
+	data, err := supervisorCon._postData("bigquery/query", q)
+	return data, err
 }
 
 func (s *SupervisorCon) Connect() bool {
@@ -274,27 +281,41 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 }
 
 func (s *SupervisorCon) _get(uri string) (string, error) {
-	return s._doRequest("GET", uri)
+	return s._doRequest("GET", uri, "")
 }
 
 func (s *SupervisorCon) _put(uri string) (string, error) {
-	return s._doRequest("PUT", uri)
+	return s._doRequest("PUT", uri, "")
 }
 
 func (s *SupervisorCon) _post(uri string) (string, error) {
-	return s._doRequest("POST", uri)
+	return s._doRequest("POST", uri, "")
+}
+
+func (s *SupervisorCon) _putData(uri string, data string) (string, error) {
+	return s._doRequest("PUT", uri, data)
+}
+
+func (s *SupervisorCon) _postData(uri string, data string) (string, error) {
+	return s._doRequest("POST", uri, data)
 }
 
 func (s *SupervisorCon) _delete(uri string) (string, error) {
-	return s._doRequest("DELETE", uri)
+	return s._doRequest("DELETE", uri, "")
 }
 
-func (s *SupervisorCon) _doRequest(method string, uri string) (string, error) {
+func (s *SupervisorCon) _doRequest(method string, uri string, data string) (string, error) {
 	// Client
 	client := s._getHttpClient()
 
 	// Request
-	req, err := http.NewRequest(method, fmt.Sprintf("%s%s", session["supervisor_uri"], uri), nil)
+	var reqBody *bytes.Buffer
+	if len(data) > 0 {
+		reqBody = bytes.NewBuffer([]byte(data))
+	} else {
+		reqBody = bytes.NewBuffer(make([]byte, 0))
+	}
+	req, err := http.NewRequest(method, fmt.Sprintf("%s%s", session["supervisor_uri"], uri), reqBody)
 	if err != nil {
 		return "", err
 	}
