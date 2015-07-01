@@ -74,6 +74,8 @@ func newConf(path string) *Conf {
 			log.Fatal(fmt.Sprintf("Failed to parse conf: %s", je))
 		}
 		c.data = data
+	} else {
+		c.data = make(map[string]string)
 	}
 	return c
 }
