@@ -256,6 +256,20 @@ func _handleConsole(input string) bool {
 }
 
 func search(q string) {
+	// Smart query builder
+	log.Println(q)
+	fromRegex := regexp.MustCompile("(?i)from([ ]+)[a-z0-9_]+")
+	fromMatch := fromRegex.FindString(q)
+	if len(fromMatch) > 0 {
+		fromSplit := strings.SplitN(fromMatch, " ", 2)
+		if len(fromSplit) >= 2 {
+			log.Println(fromSplit[1])
+			newTable := ""
+			q = strings.Replace(q, fromMatch, fmt.Sprintf("from %s", newTable), 1)
+		}
+	}
+
+	// Execute
 	data, err := supervisorCon.Search(q)
 	if err != nil {
 		printConsoleError(fmt.Sprintf("Search failed '%s'", err))

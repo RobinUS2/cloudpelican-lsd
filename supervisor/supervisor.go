@@ -153,6 +153,7 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	} else {
 		log.Printf("Command finished")
 	}
+	fmt.Fprint(w, "") // Trailing white space to finish request
 }
 
 func PutAdminConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
