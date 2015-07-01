@@ -92,11 +92,12 @@ func startConsole() {
 	CONSOLE_KEYWORDS["history"] = true
 	CONSOLE_KEYWORDS["show filters"] = true
 
-	CONSOLE_KEYWORDS_OPTS["connect"] = 2         // connect + uri
-	CONSOLE_KEYWORDS_OPTS["tail"] = 2            // tail + filter name
-	CONSOLE_KEYWORDS_OPTS["auth"] = 3            // auth + usr + pwd
-	CONSOLE_KEYWORDS_OPTS["stats"] = 2           // stats + filter name
-	CONSOLE_KEYWORDS_OPTS["describe filter"] = 3 // describe filter + filter name
+	CONSOLE_KEYWORDS_OPTS["connect"] = 2              // connect + uri
+	CONSOLE_KEYWORDS_OPTS["tail"] = 2                 // tail + filter name
+	CONSOLE_KEYWORDS_OPTS["auth"] = 3                 // auth + usr + pwd
+	CONSOLE_KEYWORDS_OPTS["stats"] = 2                // stats + filter name
+	CONSOLE_KEYWORDS_OPTS["describe filter"] = 3      // describe filter + filter name
+	CONSOLE_KEYWORDS_OPTS["configure supervisor"] = 3 // configure supervisor + k=v
 
 	// Console reader
 	term, _ = terminal.NewWithStdInOut()
@@ -225,6 +226,14 @@ func _handleConsole(input string) bool {
 		}
 		describeFilter(split[1])
 		return false
+	} else if strings.Index(inputLower, "configure supervisor ") == 0 {
+		split := strings.SplitN(input, "configure supervisor ", 2)
+		if len(split) != 2 {
+			printConsoleError(input)
+			return false
+		}
+		configureSupervisor(split[1])
+		return false
 	} else if strings.Index(inputLower, "auth ") == 0 {
 		split := strings.Split(input, " ")
 		if len(split) != 3 {
@@ -236,6 +245,18 @@ func _handleConsole(input string) bool {
 		printConsoleError(input)
 	}
 	return false
+}
+
+func configureSupervisor(kv string) {
+	split := strings.SplitN(kv, "=", 2)
+	if len(split) != 2 {
+		printConsoleError(fmt.Sprintf("You must provide a key=value pair, provided '%s'", kv))
+		return
+	}
+	_, err := supervisorCon.SetSupervisorConfig(split[0], split[1])
+	if err != nil {
+		printConsoleError(fmt.Sprintf("Failed to configure: %s", err))
+	}
 }
 
 // Select execution, example input: "create filter <filter_name> as '<regex_here>' [with options {"key": "value"}]" [] indicates optional
@@ -677,6 +698,7 @@ func printConsoleHelp() {
 	fmt.Printf("history <id>\t\t\tExecute command from history by id\n")
 	fmt.Printf("clearsession\t\t\tClears session (connectino, settings, etc)\n")
 	fmt.Printf("clearhistory\t\t\tClears history of commands\n")
+	fmt.Printf("configure supervisor <k>=<v>\tSet a configuration value in the supervisor\n")
 	fmt.Printf("ping\t\t\t\tTest connection with supervisor\n")
 	fmt.Printf("help\t\t\t\tPrints this documentation\n")
 	fmt.Printf("quit\t\t\t\tExit the CloudPelican cli\n")

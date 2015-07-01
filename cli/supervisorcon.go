@@ -124,6 +124,14 @@ func (s *SupervisorCon) Connect() bool {
 	return true
 }
 
+func (s *SupervisorCon) SetSupervisorConfig(k string, v string) (bool, error) {
+	_, err := s._put(fmt.Sprintf("admin/config?key=%s&value=%s", url.QueryEscape(k), url.QueryEscape(v)))
+	if err == nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *SupervisorCon) Ping() {
 	start := time.Now()
 	_, err := s._get("ping")
@@ -267,6 +275,10 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 
 func (s *SupervisorCon) _get(uri string) (string, error) {
 	return s._doRequest("GET", uri)
+}
+
+func (s *SupervisorCon) _put(uri string) (string, error) {
+	return s._doRequest("PUT", uri)
 }
 
 func (s *SupervisorCon) _post(uri string) (string, error) {
