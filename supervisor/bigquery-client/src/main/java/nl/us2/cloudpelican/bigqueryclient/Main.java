@@ -166,12 +166,16 @@ public class Main {
                                 .getJobId()
                 ).execute();
         List<TableRow> rows = queryResult.getRows();
+
+        // Columns
         System.err.print("\nQuery Columns:\n------------\n");
         List<TableFieldSchema> fields = queryResult.getSchema().getFields();
         for (TableFieldSchema schema : fields) {
-            System.out.println(schema.getName());
+            System.out.printf("%s\t", schema.getName());
         }
+        System.out.println();
 
+        // Data
         System.err.print("\nQuery Results:\n------------\n");
         for (TableRow row : rows) {
             for (TableCell field : row.getF()) {
