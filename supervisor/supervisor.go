@@ -30,6 +30,8 @@ var filterManager *FilterManager
 var maxMsgMemory int
 var maxMsgBatch int
 var verbose bool
+var confPath string
+var conf *Conf
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
@@ -38,11 +40,15 @@ func init() {
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
 	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
 	flag.IntVar(&maxMsgBatch, "max-msg-batch", 10000, "Maximum amount of messages sent in a single batch")
+	flag.StringVar(&confPath, "conf", "", "Path to additional configuration parameter file")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
 	flag.Parse()
 }
 
 func main() {
+	// Config
+	conf = newConf(confPath)
+
 	// Filter manager
 	filterManager = NewFilterManager()
 
@@ -86,21 +92,33 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 	log.Printf("BigQuery: %s", bodyStr)
 
-	// Marshal JSON
+	// Find bigquery conf & put in map
 	jsonData := make(map[string]string)
-	jsonData["project_id"] = "gentle-cinema-93806"
-	jsonData["dataset_id"] = "cloudpelican_lsd_v1"
-	jsonData["service_account_id"] = "744853385062-oa28bu5k51v8eufqkbcthn2f03scjnev@developer.gserviceaccount.com"
-	keyFile := "/Users/robin/Documents/35160026a228.p12"
-	keyBytes, keyErr := ioutil.ReadFile(keyFile)
-	if keyErr != nil {
-		log.Printf("ERR: Unable to read key from %s", keyFile)
-		return
+	backends := strings.Split(conf.GetNotEmpty("search_backends"), ",")
+	for _, backendId := range backends {
+		backendType := conf.Get(fmt.Sprintf("search_backends.%s.type", backendId))
+		if backendType != "bigquery" {
+			log.Println(fmt.Sprintf("Unsupported search backend %s", backendType))
+			continue
+		}
+		jsonData["project_id"] = conf.GetNotEmpty(fmt.Sprintf("search_backends.%s.project_id", backendId))
+		jsonData["dataset_id"] = conf.GetNotEmpty(fmt.Sprintf("search_backends.%s.dataset_id", backendId))
+		jsonData["service_account_id"] = conf.GetNotEmpty(fmt.Sprintf("search_backends.%s.service_account_id", backendId))
+		jsonData["pk12base64"] = conf.GetNotEmpty(fmt.Sprintf("search_backends.%s.pk12base64", backendId))
+
+		if verbose {
+			log.Println(backendId, backendType, jsonData["project_id"], jsonData["dataset_id"], jsonData["service_account_id"], jsonData["pk12base64"])
+		}
 	}
-	jsonData["pk12base64"] = base64.StdEncoding.EncodeToString(keyBytes)
+
+	// Query
 	jsonData["query"] = bodyStr
+
+	// Marshal JSON
 	jsonBytes, _ := json.Marshal(jsonData)
-	log.Printf("%s", jsonBytes)
+	if verbose {
+		log.Printf("%s", jsonBytes)
+	}
 
 	// Build base64 args
 	base64Args := base64.StdEncoding.EncodeToString(jsonBytes)
@@ -113,7 +131,9 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 
 	// Assemble JSON
 	cmd := exec.Command("java", args...)
-	cmd.Stderr = os.Stdout // Map the stdErr of the process to stdout as this is debug data
+	if verbose {
+		cmd.Stderr = os.Stdout // Map the stdErr of the process to stdout as this is debug data
+	}
 	stdout, _ := cmd.StdoutPipe()
 	err := cmd.Start()
 	if err != nil {

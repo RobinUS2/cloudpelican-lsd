@@ -1,0 +1,8 @@
+{
+    "search_backends": "bq1",
+    "search_backends.bq1.type": "bigquery",
+    "search_backends.bq1.project_id": "your-google-project",
+    "search_backends.bq1.dataset_id": "your-dataset-name",
+    "search_backends.bq1.service_account_id": "123-ab123@developer.gserviceaccount.com",
+    "search_backends.bq1.pk12base64": "<base64_encoded_string_version_of_your_p12_file>"
+}
