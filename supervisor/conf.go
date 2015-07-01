@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 )
+
+const DEFAULT_CONF_PATH string = "/etc/cloudpelican_supervisor.conf"
 
 type Conf struct {
 	data    map[string]string
@@ -34,7 +37,7 @@ func (c *Conf) Save() bool {
 		return false
 	}
 	if len(confPath) < 1 {
-		confPath = "/etc/cloudpelican_supervisor.conf"
+		confPath = DEFAULT_CONF_PATH
 	}
 	log.Printf("Writing conf to %s", confPath)
 	we := ioutil.WriteFile(confPath, b, 0600)
@@ -65,6 +68,16 @@ func (c *Conf) GetOrDefault(k string, d string) string {
 
 func newConf(path string) *Conf {
 	c := &Conf{}
+
+	// Default conf read?
+	if len(path) < 1 {
+		if _, err := os.Stat(name); err != nil {
+			if os.IsExist(err) {
+				confPath = DEFAULT_CONF_PATH
+			}
+		}
+	}
+
 	if len(path) > 0 {
 		// Load file
 		b, e := ioutil.ReadFile(path)
