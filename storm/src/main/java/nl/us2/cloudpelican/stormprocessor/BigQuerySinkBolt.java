@@ -53,6 +53,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
     private HashMap<String, Boolean> preparedTablesCache;
 
     private static final String STORAGE_SCOPE = "https://www.googleapis.com/auth/bigquery";
+    private static final int TABLE_STRUCTURE_VERSION = 1;
 
     private static JsonFactory JSON_FACTORY;
 
@@ -116,7 +117,7 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
                 // Prepare target table
                 Date now = new Date();
                 String date = sdf.format(now);
-                String targetTable = kv.getKey() + "_results_" + date;
+                String targetTable = kv.getKey() + "_results_" + date + " _v" + TABLE_STRUCTURE_VERSION;
                 targetTable = targetTable.replace('-', '_');
                 prepareTable(targetTable);
 
@@ -175,17 +176,43 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         Date now = new Date();
         Calendar cal = Calendar.getInstance();
         cal.setTime(now);
-        cal.add(Calendar.DAY_OF_MONTH, 7); // x days persistent, @todo configure
+        cal.add(Calendar.HOUR, Integer.parseInt(getSinkVarOrDefault("data_retention_hours", "168"))); // x hours persistent
         long expirationTime = cal.getTimeInMillis();
         LOG.info("Expiration set to " + new Date(expirationTime).toString());
 
         // Table definition
         TableSchema schema = new TableSchema();
         List<TableFieldSchema> tableFieldSchema = new ArrayList<TableFieldSchema>();
-        TableFieldSchema schemaEntry = new TableFieldSchema();
-        schemaEntry.setName("_raw");
-        schemaEntry.setType("STRING");
-        tableFieldSchema.add(schemaEntry);
+        TableFieldSchema schemaEntryRaw = new TableFieldSchema();
+        schemaEntryRaw.setName("_raw");
+        schemaEntryRaw.setType("STRING");
+        tableFieldSchema.add(schemaEntryRaw);
+
+        TableFieldSchema schemaEntryMsg = new TableFieldSchema();
+        schemaEntryMsg.setName("msg");
+        schemaEntryMsg.setType("STRING");
+        tableFieldSchema.add(schemaEntryMsg);
+
+        TableFieldSchema schemaEntryMsgType = new TableFieldSchema();
+        schemaEntryMsgType.setName("msg_type");
+        schemaEntryMsgType.setType("INTEGER");
+        tableFieldSchema.add(schemaEntryMsgType);
+
+        TableFieldSchema schemaEntryLabel = new TableFieldSchema();
+        schemaEntryLabel.setName("label");
+        schemaEntryLabel.setType("STRING");
+        tableFieldSchema.add(schemaEntryMsg);
+
+        TableFieldSchema schemaEntryHost = new TableFieldSchema();
+        schemaEntryHost.setName("host");
+        schemaEntryHost.setType("STRING");
+        tableFieldSchema.add(schemaEntryHost);
+
+        TableFieldSchema schemaEntryTime = new TableFieldSchema();
+        schemaEntryTime.setName("ts");
+        schemaEntryTime.setType("TIMESTAMP");
+        tableFieldSchema.add(schemaEntryTime);
+
         schema.setFields(tableFieldSchema);
 
         // Table
