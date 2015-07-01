@@ -71,7 +71,7 @@ func newConf(path string) *Conf {
 
 	// Default conf read?
 	if len(path) < 1 {
-		if _, err := os.Stat(name); err != nil {
+		if _, err := os.Stat(DEFAULT_CONF_PATH); err != nil {
 			if os.IsExist(err) {
 				confPath = DEFAULT_CONF_PATH
 			}
