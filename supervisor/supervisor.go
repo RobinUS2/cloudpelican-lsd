@@ -147,6 +147,7 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	for scanner.Scan() {
 		fmt.Fprintln(w, scanner.Text())
 	}
+	stdout.Close()
 	err = cmd.Wait()
 	if err != nil {
 		log.Printf("Command finished with error: %v", err)
