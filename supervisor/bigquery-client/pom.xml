@@ -24,6 +24,11 @@
             <artifactId>google-api-services-bigquery</artifactId>
             <version>v2-rev158-1.19.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.3.1</version>
+        </dependency>
     </dependencies>
 
     <repositories>
