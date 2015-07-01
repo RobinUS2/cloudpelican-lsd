@@ -177,12 +177,12 @@ public class BigQuerySinkBolt extends AbstractSinkBolt {
         tableFieldSchema.add(schemaEntryRaw);
 
         TableFieldSchema schemaEntryMsg = new TableFieldSchema();
-        schemaEntryMsg.setName("msg");
+        schemaEntryMsg.setName("message");
         schemaEntryMsg.setType("STRING");
         tableFieldSchema.add(schemaEntryMsg);
 
         TableFieldSchema schemaEntryMsgType = new TableFieldSchema();
-        schemaEntryMsgType.setName("msgtype");
+        schemaEntryMsgType.setName("type");
         schemaEntryMsgType.setType("INTEGER");
         tableFieldSchema.add(schemaEntryMsgType);
 
