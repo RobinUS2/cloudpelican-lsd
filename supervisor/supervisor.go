@@ -25,6 +25,7 @@ import (
 var serverPort int
 var basicAuthUsr string
 var basicAuthPwd string
+var adminPwd string
 var dbFile string
 var filterManager *FilterManager
 var maxMsgMemory int
@@ -37,6 +38,7 @@ func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
 	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
 	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
+	flag.StringVar(&adminPwd, "admin-password", "", "Password for admin operations (optional)")
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
 	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
 	flag.IntVar(&maxMsgBatch, "max-msg-batch", 10000, "Maximum amount of messages sent in a single batch")
@@ -71,6 +73,7 @@ func main() {
 	router.GET("/filter", GetFilter)                               // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)                     // Delete a filter
 	router.DELETE("/admin/truncate/outliers", DeleteAdminOutliers) // Delete outliers
+	router.PUT("/admin/config", PutAdminConfig)                    // Set configuration value
 	router.POST("/bigquery/query", PostBigQueryExecute)            // Execute a query on bigquery, NOT JSON, response is TSV
 
 	// Start webserver
@@ -152,8 +155,26 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	}
 }
 
+func PutAdminConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	if !adminAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	conf.Set(r.URL.Query().Get("key"), r.URL.Query().Get("value"))
+	res := conf.Save()
+	jresp.Set("saved", res)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
 func DeleteAdminOutliers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if !basicAuth(w, r) {
+		return
+	}
+	if !adminAuth(w, r) {
 		return
 	}
 	jresp := jresp.NewJsonResp()
@@ -504,6 +525,16 @@ func DeleteFilter(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	jresp.Set("deleted", res)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func adminAuth(w http.ResponseWriter, r *http.Request) bool {
+	if len(adminPwd) < 1 {
+		return true // No password set
+	}
+	if r.URL.Query().Get("admin_password") != adminPwd {
+		return false
+	}
+	return true
 }
 
 func basicAuth(w http.ResponseWriter, r *http.Request) bool {

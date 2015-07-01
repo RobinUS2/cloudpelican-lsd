@@ -5,17 +5,43 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"sync"
 )
 
 type Conf struct {
-	data map[string]string
+	data    map[string]string
+	dataMux sync.RWMutex
 }
 
 func (c *Conf) Get(k string) string {
+	// Locking in base function
 	return c.GetOrDefault(k, "")
 }
 
+func (c *Conf) Set(k string, v string) {
+	c.dataMux.Lock()
+	defer c.dataMux.Unlock()
+	c.data[k] = v
+}
+
+func (c *Conf) Save() bool {
+	c.dataMux.RLock()
+	defer c.dataMux.RUnlock()
+	b, je := json.Marshal(c.data)
+	if je != nil {
+		log.Printf("Failed saving conf: %s", je)
+		return false
+	}
+	we := ioutil.WriteFile(confPath, b, 0600)
+	if we != nil {
+		log.Printf("Failed saving conf: %s", we)
+		return false
+	}
+	return true
+}
+
 func (c *Conf) GetNotEmpty(k string) string {
+	// Locking in base function
 	val := c.GetOrDefault(k, "")
 	if len(val) < 1 {
 		panic(fmt.Sprintf("Value %s empty", k))
@@ -24,6 +50,8 @@ func (c *Conf) GetNotEmpty(k string) string {
 }
 
 func (c *Conf) GetOrDefault(k string, d string) string {
+	c.dataMux.RLock()
+	defer c.dataMux.RUnlock()
 	if len(c.data[k]) == 0 {
 		return d
 	}
