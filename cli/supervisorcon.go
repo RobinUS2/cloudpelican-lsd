@@ -245,10 +245,24 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 
 			// Tmp?
 			if strings.HasPrefix(filter.Name, TMP_FILTER_PREFIX) {
-				// @todo Remove if they are older than x days
-				// go func(id string) {
-				// 	s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
-				// }(filter.Id)
+				// Remove if they are older than x hours
+				tsStr := filter.Name[len(TMP_FILTER_PREFIX):]
+				tsVal, tsE := strconv.ParseInt(tsStr, 10, 64)
+				if tsE != nil {
+					tsVal = 0
+				}
+				tsNow := time.Now().Unix()
+				maxHours := int64(1)
+				tsMin := tsNow - (maxHours * 3600)
+				if tsVal < tsMin {
+					if verbose {
+						log.Println(fmt.Sprintf("Removing stale filter %s", filter.Id))
+					}
+					go func(id string) {
+						s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
+					}(filter.Id)
+				}
+
 				continue
 			}
 
