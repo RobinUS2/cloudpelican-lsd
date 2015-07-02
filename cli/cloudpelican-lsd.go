@@ -449,7 +449,7 @@ func executeSelect(input string) {
 			//streamName := split[1]
 
 			// Create filter
-			tmpFilterName = fmt.Sprintf("%d", TMP_FILTER_PREFIX, time.Now().Unix())
+			tmpFilterName = fmt.Sprintf("%s%d", TMP_FILTER_PREFIX, time.Now().Unix())
 			supervisorCon.CreateFilter(tmpFilterName, where)
 			filter, _ = supervisorCon.FilterByName(tmpFilterName)
 		}
