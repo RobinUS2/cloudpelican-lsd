@@ -42,6 +42,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
     private List<ITimeserieAnalyzer> analyzers;
     private long startTime;
     private static final int MIN_UPTIME = 60; // Seconds before this class starts outlier detection
+    private static final int NUM_CORES = 4;
 
     private static final Logger LOG = LoggerFactory.getLogger(OutlierDetectionBolt.class);
 
@@ -172,7 +173,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         dl.setDesiredTimeResolution(timeResolution);
         dl.setForecastPeriods(1);
         dl.load();
-        dl.analyze(analyzers);
+        dl.analyze(analyzers, NUM_CORES);
         List<ValidatedTimeserieOutlier> outliers = dl.validate();
         for (ValidatedTimeserieOutlier outlier : outliers) {
             LOG.info("Filter "  + filterId + " outlier at " + outlier.getTs() + " (" + new Date(outlier.getTs() * 1000L).toString() + ") score " + outlier.getScore());
