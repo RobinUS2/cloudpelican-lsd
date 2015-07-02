@@ -116,6 +116,7 @@ public class MatchBolt extends BaseRichBolt {
         }
 
         // Load
+        boolean swapFilters = false;
         try {
             HashMap<String, Filter> tmp = new HashMap<String, Filter>();
             HttpClient client = HttpClientBuilder.create()/*.setDefaultCredentialsProvider(credentialsProvider)*/.build();
@@ -141,6 +142,7 @@ public class MatchBolt extends BaseRichBolt {
                     }
                     if (!filters.containsKey(f.Id())) {
                         LOG.info("Loaded filter " + filter.toString());
+                        swapFilters = true;
                     }
                     tmp.put(f.Id(), f);
                 } catch (Exception fe) {
@@ -150,7 +152,14 @@ public class MatchBolt extends BaseRichBolt {
             }
 
             // Swap
-            filters = tmp;
+            if (swapFilters || filters.size() != tmp.size()) {
+                LOG.info("Swapping filter sets");
+                filters = tmp;
+                for (Filter filter : filters.values()) {
+                    filter.compileRegex();
+                }
+                LOG.info("Compiled filters");
+            }
         } catch (Exception e) {
             LOG.error("Failed to load filters", e);
             e.printStackTrace();

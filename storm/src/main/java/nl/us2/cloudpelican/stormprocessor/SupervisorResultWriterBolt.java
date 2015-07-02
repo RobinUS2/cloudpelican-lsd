@@ -33,6 +33,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
     OutputCollector _collector;
     HashMap<String, ArrayList<String>> resultAggregator;
     private Settings settings;
+    private static final int BATCH_SIZE = 5000;
 
     private static final Logger LOG = LoggerFactory.getLogger(SupervisorResultWriterBolt.class);
 
@@ -110,7 +111,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
         resultAggregator.get(filterId).add(msg);
 
         // Flush if we have a lot of messages in memory
-        if (resultAggregator.get(filterId).size() > 1000) {
+        if (resultAggregator.get(filterId).size() > BATCH_SIZE) {
             _flushFilter(filterId, resultAggregator.get(filterId));
         }
 

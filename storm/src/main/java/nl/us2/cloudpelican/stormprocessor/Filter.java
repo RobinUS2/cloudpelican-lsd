@@ -24,6 +24,9 @@ public class Filter {
         this.obj = obj;
         id = obj.get("id").getAsString();
         name = obj.get("name").getAsString();
+    }
+
+    public void compileRegex() {
         pattern = Pattern.compile(obj.get("regex").getAsString());
     }
 
