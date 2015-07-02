@@ -139,6 +139,7 @@ public class OutlierDetectionBolt extends BaseRichBolt {
         int skipLastSeconds = 1*timeResolution;
         long maxTs = unixTsBucket - skipLastSeconds; // Skip last X seconds
         long dataMaxTs = Long.MIN_VALUE;
+        int dataPointCount = 0;
         for (Map.Entry<String, JsonElement> kv : stats.entrySet()) {
             String serieName = kv.getKey().equals("1") ? "regular" : "error";
             for (Map.Entry<String, JsonElement> tskv : kv.getValue().getAsJsonObject().entrySet()) {
@@ -150,7 +151,13 @@ public class OutlierDetectionBolt extends BaseRichBolt {
                     dataMaxTs = ts;
                 }
                 dl.addData(serieName, tskv.getKey(), tskv.getValue().getAsString());
+                dataPointCount++;
             }
+        }
+
+        // Do we have at least 10 datapoints?
+        if (dataPointCount < 10) {
+            return;
         }
 
         // Check dataMaxTs against local test to reduce overhead
