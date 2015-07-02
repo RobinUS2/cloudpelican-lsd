@@ -42,6 +42,7 @@ var stats *Statistics
 var term *terminal.Terminal
 var oldState *terminal.State
 var cmdFinishChan chan bool
+var multiLineInput bool = false
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -132,7 +133,7 @@ func startConsole() {
 				splitLower := strings.Split(lowerStr, " ")
 
 				// Semi colon?
-				if strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
+				if !multiLineInput || strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
 					// Flush buffer
 					lineBuffer.Reset()
 					handleConsole(input)

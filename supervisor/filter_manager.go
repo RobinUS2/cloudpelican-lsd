@@ -360,7 +360,14 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 		return nil
 	})
 	wg.Wait()
-	if elm != nil && stats != nil {
+
+	// Elm found?
+	if elm == nil {
+		return nil
+	}
+
+	// Load stats
+	if stats != nil {
 		elm.Stats = stats
 	} else {
 		elm.Stats = newFilterStats()
