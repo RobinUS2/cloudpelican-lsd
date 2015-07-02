@@ -85,7 +85,7 @@ public class Main {
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
-        int globalConcurrency = 4;
+        int globalConcurrency = 6;
 
         // Time
         TimeZone.setDefault(TimeZone.getTimeZone("Etc/UTC"));
@@ -140,7 +140,7 @@ public class Main {
                     if (!sinkBolt.isValid()) {
                         LOG.error("Sink '" + sinkName + "' not valid");
                     }
-                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 6).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }
             }
         }
