@@ -56,8 +56,6 @@ public class MatchBolt extends BaseRichBolt {
         filters = null;
         this.settings = settings;
         this.regex = this.settings.get("match_regex");
-
-
     }
 
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
@@ -88,21 +86,21 @@ public class MatchBolt extends BaseRichBolt {
     }
 
     public void executeTick() {
-        long start = new Date().getTime();
+//        long start = new Date().getTime();
         loadFilters();
         // Once a minute
         if (new Date().getTime()/1000L % 60 == 0) {
             dispatchOutlierChecks();
         }
-        LOG.info("Tick took " + (new Date().getTime() - start));
+//        LOG.info("Tick took " + (new Date().getTime() - start));
     }
 
     protected void dispatchOutlierChecks() {
-        long start = new Date().getTime();
+//        long start = new Date().getTime();
         for (Filter filter : getFilters().values()) {
             _collector.emit("dispatch_outlier_checks", new Values(filter.Id()));
         }
-        LOG.info("Outliers dispatch took " + (new Date().getTime() - start));
+//        LOG.info("Outliers dispatch took " + (new Date().getTime() - start));
     }
 
     protected void loadFilters() {
@@ -112,7 +110,7 @@ public class MatchBolt extends BaseRichBolt {
         }
 
         // Init
-        long start = new Date().getTime();
+//        long start = new Date().getTime();
         if (filters == null) {
             filters = new HashMap<String, Filter>();
         }
@@ -166,7 +164,7 @@ public class MatchBolt extends BaseRichBolt {
             LOG.error("Failed to load filters", e);
             e.printStackTrace();
         }
-        LOG.info("Loading filters took " + (new Date().getTime() - start));
+//        LOG.info("Loading filters took " + (new Date().getTime() - start));
     }
 
     protected HashMap<String, Filter> getFilters() {

@@ -12,9 +12,9 @@ import java.util.regex.Pattern;
  * Created by robin on 07/06/15.
  */
 public class Filter {
-    private JsonObject obj;
-    private String id;
-    private String name;
+    private final JsonObject obj;
+    private final String id;
+    private final String name;
     private Pattern pattern;
     private Matcher matcher;
 
@@ -54,9 +54,8 @@ public class Filter {
     public Matcher Matcher(String msg) {
         if (matcher == null) {
             matcher = pattern.matcher(msg);
-        } else {
-            matcher = matcher.reset(msg);
+            return matcher;
         }
-        return matcher;
+        return matcher.reset(msg);
     }
 }
