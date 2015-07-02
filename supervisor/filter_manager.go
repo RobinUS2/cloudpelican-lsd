@@ -22,6 +22,10 @@ type FilterManager struct {
 	filterStatsTable    string
 	filterStats         map[string]*FilterStats
 	filterOutliersTable string
+
+	// Caches
+	filtersCache    []*Filter
+	filtersCacheMux sync.RWMutex
 }
 
 type FilterStats struct {
@@ -309,6 +313,15 @@ func (fm *FilterManager) Open() {
 }
 
 func (fm *FilterManager) GetFilters() []*Filter {
+	// Cache
+	fm.filtersCacheMux.RLock()
+	if fm.filtersCache != nil {
+		fm.filtersCacheMux.RUnlock()
+		return fm.filtersCache
+	}
+	fm.filtersCacheMux.RUnlock()
+
+	// Load
 	var wg sync.WaitGroup
 	var list []*Filter = make([]*Filter, 0)
 	wg.Add(1)
@@ -327,6 +340,12 @@ func (fm *FilterManager) GetFilters() []*Filter {
 		return nil
 	})
 	wg.Wait()
+
+	// Save in cache
+	fm.filtersCacheMux.Lock()
+	fm.filtersCache = list
+	fm.filtersCacheMux.Unlock()
+
 	return list
 }
 
@@ -376,6 +395,7 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 }
 
 func (fm *FilterManager) DeleteFilter(id string) bool {
+	// Remove
 	var val bool = false
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -390,6 +410,12 @@ func (fm *FilterManager) DeleteFilter(id string) bool {
 		return err
 	})
 	wg.Wait()
+
+	// Invalidate cache
+	fm.filtersCacheMux.Lock()
+	fm.filtersCache = nil
+	fm.filtersCacheMux.Unlock()
+
 	return val
 }
 
@@ -481,6 +507,12 @@ func (fm *FilterManager) CreateFilter(name string, clientHost string, regex stri
 		return err
 	})
 	wg.Wait()
+
+	// Invalidate cache
+	fm.filtersCacheMux.Lock()
+	fm.filtersCache = nil
+	fm.filtersCacheMux.Unlock()
+
 	return id, err
 }
 
