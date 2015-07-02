@@ -86,17 +86,21 @@ public class MatchBolt extends BaseRichBolt {
     }
 
     public void executeTick() {
+        long start = new Date().getTime();
         loadFilters();
         // Once a minute
         if (new Date().getTime()/1000L % 60 == 0) {
             dispatchOutlierChecks();
         }
+        LOG.info("Tick took " + (new Date().getTime() - start));
     }
 
     protected void dispatchOutlierChecks() {
+        long start = new Date().getTime();
         for (Filter filter : getFilters().values()) {
             _collector.emit("dispatch_outlier_checks", new Values(filter.Id()));
         }
+        LOG.info("Outliers dispatch took " + (new Date().getTime() - start));
     }
 
     protected void loadFilters() {
