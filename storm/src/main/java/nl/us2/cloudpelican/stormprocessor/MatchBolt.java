@@ -106,6 +106,7 @@ public class MatchBolt extends BaseRichBolt {
         }
 
         // Init
+        long start = new Date().getTime();
         if (filters == null) {
             filters = new HashMap<String, Filter>();
         }
@@ -131,6 +132,9 @@ public class MatchBolt extends BaseRichBolt {
                 try {
                     JsonObject filter = elm.getAsJsonObject();
                     Filter f = new Filter(filter);
+                    if (!f.isValid()) {
+                        continue;
+                    }
                     if (!filters.containsKey(f.Id())) {
                         LOG.info("Loaded filter " + filter.toString());
                     }
@@ -147,6 +151,7 @@ public class MatchBolt extends BaseRichBolt {
             LOG.error("Failed to load filters", e);
             e.printStackTrace();
         }
+        LOG.info("Loading filters took " + (new Date().getTime() - start));
     }
 
     protected HashMap<String, Filter> getFilters() {
