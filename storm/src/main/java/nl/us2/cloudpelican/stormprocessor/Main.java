@@ -85,7 +85,7 @@ public class Main {
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
-        int globalConcurrency = 2;
+        int globalConcurrency = 4;
 
         // Time
         TimeZone.setDefault(TimeZone.getTimeZone("Etc/UTC"));
@@ -100,20 +100,20 @@ public class Main {
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 16).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 4).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
 
         // Error classifier bolt
-        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor result writer bolt
-        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor stats writer bolt
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
         builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
-        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
         builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), globalConcurrency * 1).shuffleGrouping(OUTLIER_DETECTION, "outliers");
 
         // Sink
