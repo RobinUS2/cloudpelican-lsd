@@ -43,7 +43,7 @@ func init() {
 	flag.StringVar(&adminPwd, "admin-password", "", "Password for admin operations (optional)")
 	flag.StringVar(&dbFile, "db-file", "cloudpelican_lsd_supervisor.db", "Database file")
 	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
-	flag.IntVar(&maxMsgMemory, "max-msg-memory", 10000, "Maximum amount of messages kept in memory")
+	flag.IntVar(&maxMsgBatch, "max-msg-batch", 10000, "Maximum amount of messages sent in a single batch")
 	flag.IntVar(&numCores, "cpu-cores", -1, "Amount of cores we can use (-1 = all available)")
 	flag.StringVar(&confPath, "conf", "", "Path to additional configuration parameter file")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
