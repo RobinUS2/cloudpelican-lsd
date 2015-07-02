@@ -61,31 +61,35 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
 
     protected void _flush() {
         for (Map.Entry<String, ArrayList<String>> kv : resultAggregator.entrySet()) {
-            try {
-                HttpClient client = HttpClientBuilder.create().build();
-
-                String url = settings.get("supervisor_host") + "filter/" + kv.getKey() + "/result";
-                LOG.debug(url);
-                HttpPut put = new HttpPut(url);
-                StringBuilder sb = new StringBuilder();
-                for (String line : kv.getValue()) {
-                    sb.append(line).append("\n");
-                }
-                StringEntity entity = new StringEntity(sb.toString());
-                put.setEntity(entity);
-                String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-                LOG.debug(token);
-                put.setHeader("Authorization", "Basic " + token);
-                HttpResponse resp = client.execute(put);
-                int status = resp.getStatusLine().getStatusCode();
-                if (status >= 400) {
-                    throw new Exception("Invalid status " + status);
-                }
-            } catch (Exception e) {
-                LOG.error("Failed to write data to supervisor", e);
-            }
+            _flushFilter(kv.getKey(), kv.getValue());
         }
         resultAggregator.clear();
+    }
+
+    protected void _flushFilter(String filterId, ArrayList<String> data) {
+        try {
+            HttpClient client = HttpClientBuilder.create().build();
+
+            String url = settings.get("supervisor_host") + "filter/" + filterId + "/result";
+            LOG.debug(url);
+            HttpPut put = new HttpPut(url);
+            StringBuilder sb = new StringBuilder();
+            for (String line : data) {
+                sb.append(line).append("\n");
+            }
+            StringEntity entity = new StringEntity(sb.toString());
+            put.setEntity(entity);
+            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
+            LOG.debug(token);
+            put.setHeader("Authorization", "Basic " + token);
+            HttpResponse resp = client.execute(put);
+            int status = resp.getStatusLine().getStatusCode();
+            if (status >= 400) {
+                throw new Exception("Invalid status " + status);
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to write data to supervisor", e);
+        }
     }
 
     public Map<String, Object> getComponentConfiguration() {
@@ -94,7 +98,6 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
         conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequencyInSeconds);
         return conf;
     }
-
 
     public void executeTuple(Tuple tuple) {
         String filterId = tuple.getStringByField("filter_id");
@@ -106,7 +109,10 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
         }
         resultAggregator.get(filterId).add(msg);
 
-        // @todo Flush if we have a lot of messages in memory
+        // Flush if we have a lot of messages in memory
+        if (resultAggregator.get(filterId).size() > 1000) {
+            _flushFilter(filterId, resultAggregator.get(filterId));
+        }
 
         // No ack, is handled in outer
     }

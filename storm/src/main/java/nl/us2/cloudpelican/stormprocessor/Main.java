@@ -85,7 +85,7 @@ public class Main {
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
-        int globalConcurrency = 1;
+        int globalConcurrency = 2;
 
         // Time
         TimeZone.setDefault(TimeZone.getTimeZone("Etc/UTC"));
