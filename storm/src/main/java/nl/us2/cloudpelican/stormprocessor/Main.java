@@ -100,7 +100,7 @@ public class Main {
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 8).localOrShuffleGrouping(KAFKA_SPOUT);
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 16).localOrShuffleGrouping(KAFKA_SPOUT);
 
         // Error classifier bolt
         builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
@@ -140,7 +140,7 @@ public class Main {
                     if (!sinkBolt.isValid()) {
                         LOG.error("Sink '" + sinkName + "' not valid");
                     }
-                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 6).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }
             }
         }
