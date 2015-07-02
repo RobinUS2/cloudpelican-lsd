@@ -49,6 +49,8 @@ public class MatchBolt extends BaseRichBolt {
 
     private static final Logger LOG = LoggerFactory.getLogger(MatchBolt.class);
 
+    private static final int MAX_MSG_LENGTH = 2048;
+
     public MatchBolt(Settings settings) {
         super();
         filters = null;
@@ -186,6 +188,13 @@ public class MatchBolt extends BaseRichBolt {
         String msg = tuple.getString(0).trim();
         if (msg.isEmpty()) {
             return;
+        }
+
+        // Msg length?
+        int len = msg.length();
+        if (len > MAX_MSG_LENGTH) {
+            LOG.warn("Truncating msg which has length of " + len);
+            msg = msg.substring(0, MAX_MSG_LENGTH) + "..";
         }
 
         // Match filters
