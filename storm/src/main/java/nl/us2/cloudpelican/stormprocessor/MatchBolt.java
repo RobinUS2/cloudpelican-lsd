@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -86,7 +87,10 @@ public class MatchBolt extends BaseRichBolt {
 
     public void executeTick() {
         loadFilters();
-        dispatchOutlierChecks();
+        // Once a minute
+        if (new Date().getTime()/1000L % 60 == 0) {
+            dispatchOutlierChecks();
+        }
     }
 
     protected void dispatchOutlierChecks() {

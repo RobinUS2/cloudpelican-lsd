@@ -100,7 +100,7 @@ public class Main {
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 16).localOrShuffleGrouping(KAFKA_SPOUT);
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 16).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
 
         // Error classifier bolt
         builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 8).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
