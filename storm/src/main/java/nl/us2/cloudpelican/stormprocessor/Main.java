@@ -152,7 +152,7 @@ public class Main {
         if (argList.contains("-submit")) {
             conf.setNumWorkers(globalConcurrency);
             conf.setNumAckers(globalConcurrency);
-            conf.setMaxSpoutPending(5000);
+            conf.setMaxSpoutPending(1000);
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
             LocalCluster cluster = new LocalCluster();
