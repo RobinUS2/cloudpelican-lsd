@@ -830,8 +830,8 @@ func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int)
 	}
 
 	// Only suggest if we have one option left
-	if len(opts) == 1 {
-		var opt = opts[0]
+	if len(opts) == 1 && opts[0] != strings.TrimSpace(string(line)) {
+		var opt = fmt.Sprintf("%s ", opts[0])
 		return []byte(opt), pos + len(opt) - len(lineStr)
 	}
 	return nil, pos
