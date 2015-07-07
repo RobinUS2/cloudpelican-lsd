@@ -180,6 +180,8 @@ func _handleConsole(input string) bool {
 		showFilters()
 	} else if strings.Index(inputLower, "select ") == 0 {
 		executeSelect(inputLower)
+	} else if strings.Index(inputLower, "cat ") == 0 {
+		executeGrepSQL(inputLower)
 	} else if strings.Index(inputLower, "create filter ") == 0 {
 		createFilter(inputLower)
 	} else if strings.Index(inputLower, "drop filter ") == 0 {
@@ -256,6 +258,23 @@ func _handleConsole(input string) bool {
 	return false
 }
 
+func executeGrepSQL(in string) {
+	gsql := newGrepSQL(in)
+	q, e := gsql.Parse()
+	if e != nil {
+		printConsoleError(fmt.Sprintf("%s", e))
+		return
+	}
+
+	// Execute
+	data, err := supervisorCon.Search(q)
+	if err != nil {
+		printConsoleError(fmt.Sprintf("Search failed '%s'", err))
+		return
+	}
+	fmt.Print(data)
+}
+
 func search(q string) {
 	// Smart query builder
 	q = strings.ToLower(q)
@@ -266,9 +285,7 @@ func search(q string) {
 		if len(fromSplit) >= 2 {
 			filter, _ := supervisorCon.FilterByName(fromSplit[1])
 			if filter != nil {
-				t := time.Now()
-				date := t.Format("2006_01_02")
-				newTable := fmt.Sprintf("cloudpelican_lsd_v1.%s_results_%s_v%d", strings.Replace(filter.Id, "-", "_", -1), date, 1) // @todo configure bigquery dataset and table version
+				newTable := filter.GetSearchTableName()
 				q = strings.Replace(q, fromMatch, fmt.Sprintf("from %s", newTable), 1)
 			}
 		}
@@ -798,7 +815,7 @@ func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int)
 	}
 
 	// Autocomplete filter names
-	if strings.Index(lineStr, "stats") == 0 || strings.Index(lineStr, "tail") == 0 {
+	if strings.Index(lineStr, "stats") == 0 || strings.Index(lineStr, "tail") == 0 || strings.Index(lineStr, "describe filter") == 0 || strings.Index(lineStr, "cat") == 0 {
 		split := strings.SplitN(lineStr, " ", 2)
 		if len(split) == 2 {
 			filters, _ := supervisorCon.Filters()
@@ -813,8 +830,8 @@ func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int)
 	}
 
 	// Only suggest if we have one option left
-	if len(opts) == 1 {
-		var opt = opts[0]
+	if len(opts) == 1 && opts[0] != strings.TrimSpace(string(line)) {
+		var opt = fmt.Sprintf("%s ", opts[0])
 		return []byte(opt), pos + len(opt) - len(lineStr)
 	}
 	return nil, pos
