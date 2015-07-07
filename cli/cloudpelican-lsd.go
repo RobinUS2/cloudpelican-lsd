@@ -259,8 +259,12 @@ func _handleConsole(input string) bool {
 }
 
 func executeGrepSQL(in string) {
-	gsql := newGrepSQL(input)
-	q := gsql.Parse()
+	gsql := newGrepSQL(in)
+	q, e := gsql.Parse()
+	if e != nil {
+		printConsoleError(fmt.Sprintf("%s", e))
+		return
+	}
 	log.Println(q)
 }
 
@@ -274,9 +278,7 @@ func search(q string) {
 		if len(fromSplit) >= 2 {
 			filter, _ := supervisorCon.FilterByName(fromSplit[1])
 			if filter != nil {
-				t := time.Now()
-				date := t.Format("2006_01_02")
-				newTable := fmt.Sprintf("cloudpelican_lsd_v1.%s_results_%s_v%d", strings.Replace(filter.Id, "-", "_", -1), date, 1) // @todo configure bigquery dataset and table version
+				newTable := filter.GetSearchTableName()
 				q = strings.Replace(q, fromMatch, fmt.Sprintf("from %s", newTable), 1)
 			}
 		}

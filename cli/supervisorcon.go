@@ -30,6 +30,15 @@ type Filter struct {
 	Id         string `json:"id"`
 }
 
+// Get table name from filter
+func (f *Filter) GetSearchTableName() string {
+	// @todo support custom time range
+	t := time.Now()
+	date := t.Format("2006_01_02")
+	newTable := fmt.Sprintf("cloudpelican_lsd_v1.%s_results_%s_v%d", strings.Replace(f.Id, "-", "_", -1), date, 1) // @todo configure bigquery dataset and table version
+	return newTable
+}
+
 // Returns a map of metricId => timestamp => count
 func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, error) {
 	// Request
