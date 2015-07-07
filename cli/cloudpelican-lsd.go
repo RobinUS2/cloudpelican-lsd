@@ -815,7 +815,7 @@ func processAutocomplete(line []byte, pos, key int) (newLine []byte, newPos int)
 	}
 
 	// Autocomplete filter names
-	if strings.Index(lineStr, "stats") == 0 || strings.Index(lineStr, "tail") == 0 {
+	if strings.Index(lineStr, "stats") == 0 || strings.Index(lineStr, "tail") == 0 || strings.Index(lineStr, "describe filter") == 0 || strings.Index(lineStr, "cat") == 0 {
 		split := strings.SplitN(lineStr, " ", 2)
 		if len(split) == 2 {
 			filters, _ := supervisorCon.Filters()
