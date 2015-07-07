@@ -265,7 +265,14 @@ func executeGrepSQL(in string) {
 		printConsoleError(fmt.Sprintf("%s", e))
 		return
 	}
-	log.Println(q)
+
+	// Execute
+	data, err := supervisorCon.Search(q)
+	if err != nil {
+		printConsoleError(fmt.Sprintf("Search failed '%s'", err))
+		return
+	}
+	fmt.Print(data)
 }
 
 func search(q string) {

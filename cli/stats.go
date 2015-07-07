@@ -43,7 +43,7 @@ func (s *Statistics) loadTerminalDimensions() {
 	s.terminalHeight = int(height)
 	s.terminalWidth = int(width)
 	if verbose {
-		log.Println("Terminal dimension %dx%d (WxH)", s.terminalWidth, s.terminalHeight)
+		log.Printf("Terminal dimension %dx%d (WxH)", s.terminalWidth, s.terminalHeight)
 	}
 }
 

@@ -119,6 +119,9 @@ func (f *Filter) GetStats(window int64, rollup int64) (map[int]map[int64]int64, 
 }
 
 func (s *SupervisorCon) Search(q string) (string, error) {
+	if verbose {
+		log.Printf("Executing search query: %s", q)
+	}
 	// @todo setting to configure default search backend
 	data, err := supervisorCon._postData("bigquery/query", q)
 	return data, err
