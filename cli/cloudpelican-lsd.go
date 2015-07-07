@@ -180,6 +180,8 @@ func _handleConsole(input string) bool {
 		showFilters()
 	} else if strings.Index(inputLower, "select ") == 0 {
 		executeSelect(inputLower)
+	} else if strings.Index(inputLower, "cat ") == 0 {
+		executeGrepSQL(inputLower)
 	} else if strings.Index(inputLower, "create filter ") == 0 {
 		createFilter(inputLower)
 	} else if strings.Index(inputLower, "drop filter ") == 0 {
@@ -254,6 +256,12 @@ func _handleConsole(input string) bool {
 		printConsoleError(input)
 	}
 	return false
+}
+
+func executeGrepSQL(in string) {
+	gsql := newGrepSQL(input)
+	q := gsql.Parse()
+	log.Println(q)
 }
 
 func search(q string) {
