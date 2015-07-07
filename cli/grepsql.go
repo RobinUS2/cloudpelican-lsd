@@ -65,6 +65,8 @@ func (g *GrepSQL) Parse() (string, error) {
 	tok := s.Scan()
 	var previousTokens []string = make([]string, 0)
 	var i int = 0
+	var sort bool = false
+	var head bool = false
 	var currentCmd *GrepCmd = nil
 	for tok != scanner.EOF {
 		// Get token
@@ -84,15 +86,21 @@ func (g *GrepSQL) Parse() (string, error) {
 			// Begin of command
 			if previousTokens[i-1] == "|" {
 				// Previous token is pipe, this must be grep
-				if token != "grep" {
+				if token != "grep" && token != "sort" && token != "head" {
 					return "", errors.New(fmt.Sprintf("Invalid token %s", token))
 				}
 
-				// Init
-				if verbose {
-					log.Printf("New token command")
+				// Init new command
+				if token == "grep" {
+					if verbose {
+						log.Printf("New token command")
+					}
+					currentCmd = newGrepCmd()
+				} else if token == "sort" {
+					sort = true
+				} else if token == "head" {
+					head = true
 				}
-				currentCmd = newGrepCmd()
 			} else if previousTokens[i-1] == "-" && currentCmd != nil {
 				// Flag
 				if token != "v" && token != "e" && token != "i" {
@@ -163,6 +171,16 @@ func (g *GrepSQL) Parse() (string, error) {
 			wheres = append(wheres, cmd.Where())
 		}
 		qBuf.WriteString(strings.Join(wheres, " AND "))
+	}
+
+	// Sort
+	if sort {
+		qBuf.WriteString(" ORDER BY _raw ASC")
+	}
+
+	// Header
+	if head {
+		qBuf.WriteString(" LIMIT 10")
 	}
 
 	// Done
