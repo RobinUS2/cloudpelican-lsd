@@ -34,22 +34,28 @@ func (w *GrepCmd) Where() string {
 	// Column
 	var column string = "_raw"
 
+	// Exclude?
+	var notSuffix string = ""
+	if w.flags["v"] {
+		notSuffix = "NOT "
+	}
+
 	// Regex?
 	if w.flags["e"] {
 		if w.flags["i"] && !strings.Contains(w.pattern, "(?i)") {
 			// Inject case insensitive into the pattern
 			w.pattern = fmt.Sprintf("(?i)%s", w.pattern)
 		}
-		return fmt.Sprintf("REGEXP_MATCH(%s, '%s')", column, w.pattern)
+		return fmt.Sprintf("%sREGEXP_MATCH(%s, '%s')", notSuffix, column, w.pattern)
 	}
 
 	// Case sensitive?
 	if w.flags["i"] {
-		return fmt.Sprintf("LOWER(%s) LIKE LOWER('%%%s%%')", column, w.pattern)
+		return fmt.Sprintf("LOWER(%s) %sLIKE LOWER('%%%s%%')", column, notSuffix, w.pattern)
 	}
 
 	// Regular matching
-	return fmt.Sprintf("%s LIKE '%%%s%%'", column, w.pattern)
+	return fmt.Sprintf("%s %sLIKE '%%%s%%'", column, notSuffix, w.pattern)
 }
 
 func (g *GrepSQL) Parse() (string, error) {
