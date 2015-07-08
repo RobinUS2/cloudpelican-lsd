@@ -68,7 +68,7 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	// Colors
 	primaryColor := "green"
 	secondaryColor := "red"
-	if s.colorEnabled {
+	if !s.colorEnabled {
 		primaryColor = "reset"
 		secondaryColor = "reset"
 	}
