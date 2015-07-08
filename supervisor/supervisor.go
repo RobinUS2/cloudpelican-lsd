@@ -135,7 +135,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Assemble JSON
 	cmd := exec.Command("cloudpelican", args...)
-	cmd.Stderr = os.Stdout // Redirect std error
+	//cmd.Stderr = os.Stdout // Redirect std error
 	stdout, _ := cmd.StdoutPipe()
 	err := cmd.Start()
 	if err != nil {
