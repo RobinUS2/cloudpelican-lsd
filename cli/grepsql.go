@@ -67,6 +67,8 @@ func (g *GrepSQL) Parse() (string, error) {
 	var i int = 0
 	var sort bool = false
 	var head bool = false
+	var limit bool = false
+	var limitVal string = ""
 	var currentCmd *GrepCmd = nil
 	for tok != scanner.EOF {
 		// Get token
@@ -86,7 +88,7 @@ func (g *GrepSQL) Parse() (string, error) {
 			// Begin of command
 			if previousTokens[i-1] == "|" {
 				// Previous token is pipe, this must be grep
-				if token != "grep" && token != "sort" && token != "head" {
+				if token != "grep" && token != "sort" && token != "head" && token != "limit" {
 					return "", errors.New(fmt.Sprintf("Invalid token %s", token))
 				}
 
@@ -100,7 +102,11 @@ func (g *GrepSQL) Parse() (string, error) {
 					sort = true
 				} else if token == "head" {
 					head = true
+				} else if token == "limit" {
+					limit = true
 				}
+			} else if previousTokens[i-1] == "limit" {
+				limitVal = token
 			} else if previousTokens[i-1] == "-" && currentCmd != nil {
 				// Flag
 				if token != "v" && token != "e" && token != "i" {
@@ -181,6 +187,8 @@ func (g *GrepSQL) Parse() (string, error) {
 	// Header
 	if head {
 		qBuf.WriteString(" LIMIT 10")
+	} else if limit {
+		qBuf.WriteString(fmt.Sprintf(" LIMIT %s", limitVal))
 	}
 
 	// Done
