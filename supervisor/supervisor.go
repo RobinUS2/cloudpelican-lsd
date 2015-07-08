@@ -141,7 +141,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Waiting for command to finish...")
+	log.Printf("Waiting for command Slack to finish...")
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		fmt.Fprintln(w, scanner.Text())
@@ -149,9 +149,9 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	stdout.Close()
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("Command finished with error: %v", err)
+		log.Printf("Command Slack finished with error: %v", err)
 	} else {
-		log.Printf("Command finished")
+		log.Printf("Command Slack finished")
 	}
 
 	// End block
@@ -220,7 +220,7 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Waiting for command to finish...")
+	log.Printf("Waiting for command BigQuery to finish...")
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		fmt.Fprintln(w, scanner.Text())
@@ -228,9 +228,9 @@ func PostBigQueryExecute(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 	stdout.Close()
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("Command finished with error: %v", err)
+		log.Printf("Command BigQuery finished with error: %v", err)
 	} else {
-		log.Printf("Command finished")
+		log.Printf("Command BigQuery finished")
 	}
 	fmt.Fprint(w, "") // Trailing white space to finish request
 }
