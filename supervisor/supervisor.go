@@ -145,7 +145,11 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	scanner := bufio.NewScanner(stdout)
 	var responseLines int64 = 0
 	for scanner.Scan() {
-		fmt.Fprintln(w, scanner.Text())
+		txt := scanner.Text()
+		if verbose {
+			log.Println(txt)
+		}
+		fmt.Fprintln(w, txt)
 		responseLines++
 	}
 	stdout.Close()
