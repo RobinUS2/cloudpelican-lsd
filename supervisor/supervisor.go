@@ -149,7 +149,6 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var responseLines int64 = 0
 	var responseCharLimit int64 = 12 * 1024
 	var responseChars int64 = 0
-	//truncated := make(chan bool, 1)
 	for scanner.Scan() {
 		txt := scanner.Text()
 		if verbose {
@@ -159,8 +158,6 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		responseChars += int64(len(txt))
 		if responseChars >= responseCharLimit {
 			fmt.Fprintln(w, "WARN! TRUNCATED OUTPUT")
-			log.Println("Slack output truncated")
-			//truncated <- true
 			break
 		}
 		responseLines++
@@ -169,28 +166,18 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	// Close output stream
 	stdout.Close()
 
-	// Wait for it to exit
-	done := make(chan error, 1)
+	// Timeout
 	go func() {
-		done <- cmd.Wait()
+		time.Sleep(10 * time.Second)
+		cmd.Process.Kill()
 	}()
-	select {
-	//case <-truncated:
-	case <-time.After(5 * time.Second):
-		log.Println("killing process")
-		if err := cmd.Process.Kill(); err != nil {
-			log.Fatal("failed to kill: ", err)
-		}
-		<-done // allow goroutine to exit
-		log.Println("process killed")
-		break
-	case err := <-done:
-		if err != nil {
-			log.Printf("Command Slack finished with error: %v", err)
-		} else {
-			log.Printf("Command Slack finished, written %d lines", responseLines)
-		}
-		break
+
+	// Wait for it
+	err = cmd.Wait()
+	if err != nil {
+		log.Printf("Command Slack finished with error: %v", err)
+	} else {
+		log.Printf("Command Slack finished, written %d lines", responseLines)
 	}
 
 	// End block
