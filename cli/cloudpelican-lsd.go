@@ -244,7 +244,7 @@ func _handleConsole(input string) bool {
 			return false
 		}
 		search(split[1])
-		return true
+		return false
 	} else if strings.Index(inputLower, "stats ") == 0 {
 		split := strings.SplitN(input, "stats ", 2)
 		if len(split) < 2 {
