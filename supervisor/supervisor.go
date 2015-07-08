@@ -7,7 +7,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -131,11 +130,8 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	args = append(args, "-e")
 	args = append(args, input)
 
-	// Output buffer
-	var buf bytes.Buffer
-
 	// Format in blocks
-	buf.WriteString("```")
+	fmt.Fprint(w, "```")
 
 	// Assemble JSON
 	cmd := exec.Command("cloudpelican", args...)
@@ -153,8 +149,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		if verbose {
 			log.Println(txt)
 		}
-		buf.WriteString(txt)
-		buf.WriteString("\n")
+		fmt.Fprintln(w, txt)
 		responseLines++
 	}
 	stdout.Close()
@@ -166,8 +161,8 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// End block
-	buf.WriteString("```")
-	fmt.Fprint(w, buf.String())
+	fmt.Fprint(w, "```")
+	fmt.Fprint(w, "") // Trailing white space to finish request
 }
 
 // This is not a JSON response
