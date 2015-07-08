@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var serverPort int
@@ -141,6 +142,8 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Read output and write over buffer
 	log.Printf("Waiting for command Slack to finish...")
 	scanner := bufio.NewScanner(stdout)
 	var responseLines int64 = 0
@@ -159,12 +162,28 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		}
 		responseLines++
 	}
+
+	// Close output stream
 	stdout.Close()
-	err = cmd.Wait()
-	if err != nil {
-		log.Printf("Command Slack finished with error: %v", err)
-	} else {
-		log.Printf("Command Slack finished, written %d lines", responseLines)
+
+	// Wait for it to exit
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+	select {
+	case <-time.After(30 * time.Second):
+		if err := cmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill: ", err)
+		}
+		<-done // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-done:
+		if err != nil {
+			log.Printf("Command Slack finished with error: %v", err)
+		} else {
+			log.Printf("Command Slack finished, written %d lines", responseLines)
+		}
 	}
 
 	// End block
