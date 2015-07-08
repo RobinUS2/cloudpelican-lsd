@@ -166,6 +166,10 @@ public class Main {
                                 .getJobId()
                 ).execute();
         List<TableRow> rows = queryResult.getRows();
+        if (rows == null) {
+            System.err.print("\nNo data\n");
+            return;
+        }
 
         // Columns
         System.err.print("\nQuery Columns:\n------------\n");
