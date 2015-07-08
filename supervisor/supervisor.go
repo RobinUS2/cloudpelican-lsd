@@ -122,12 +122,12 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Args
 	args := make([]string, 0)
-	args = append(args, "-e")
 	if verbose {
 		args = append(args, "-v")
 	} else {
 		args = append(args, "--silent=true")
 	}
+	args = append(args, "-e")
 	args = append(args, input)
 
 	// Format in blocks
