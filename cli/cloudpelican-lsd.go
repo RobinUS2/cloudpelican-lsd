@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carmark/pseudo-terminal-go/terminal"
+	terminal "github.com/carmark/pseudo-terminal-go/terminal"
 )
 
 var customConfPath string
@@ -73,7 +73,7 @@ func main() {
 		if wait {
 			<-cmdFinishChan
 		}
-		restoreTerminalAndExit(term, oldState)
+		//restoreTerminalAndExit(term, oldState)
 	}
 
 	// Listen for user input

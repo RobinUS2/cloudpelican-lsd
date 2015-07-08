@@ -24,6 +24,7 @@ import (
 )
 
 var serverPort int
+var slackServerPort int
 var basicAuthUsr string
 var basicAuthPwd string
 var adminPwd string
@@ -38,6 +39,7 @@ var numCores int
 
 func init() {
 	flag.IntVar(&serverPort, "port", 1525, "Server port")
+	flag.IntVar(&slackServerPort, "slack-port", 1526, "Slack server port")
 	flag.StringVar(&basicAuthUsr, "auth-user", "cloud", "Username")
 	flag.StringVar(&basicAuthPwd, "auth-password", "pelican", "Password")
 	flag.StringVar(&adminPwd, "admin-password", "", "Password for admin operations (optional)")
@@ -87,7 +89,12 @@ func main() {
 	router.POST("/bigquery/query", PostBigQueryExecute)            // Execute a query on bigquery, NOT JSON, response is TSV
 
 	// Slack handler: see https://api.slack.com/slash-commands
-	router.POST("/slack", PostSlack)
+	go func() {
+		slackRouter := httprouter.New()
+		slackRouter.POST("/slack", PostSlack)
+		log.Println(fmt.Sprintf("Starting Slack service at port %d", slackServerPort))
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", slackServerPort), slackRouter))
+	}()
 
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
@@ -106,10 +113,39 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		log.Println("Invalid Slack token")
 		return
 	}
+
+	// Collect input
 	input := r.PostFormValue("text")
 	if verbose {
 		log.Printf("Slack input: %s", input)
 	}
+
+	// Args
+	// args := make([]string, 0)
+	// args = append(args, "-e")
+	// args = append(args, input)
+
+	// Assemble JSON
+	cmd := exec.Command("./run_cloudpelican_cli.sh", "help")
+	cmd.Stderr = os.Stdout // Redirect std error
+	stdout, _ := cmd.StdoutPipe()
+	err := cmd.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Waiting for command to finish...")
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		fmt.Fprintln(w, scanner.Text())
+	}
+	stdout.Close()
+	err = cmd.Wait()
+	if err != nil {
+		log.Printf("Command finished with error: %v", err)
+	} else {
+		log.Printf("Command finished")
+	}
+	fmt.Fprint(w, "") // Trailing white space to finish request
 }
 
 // This is not a JSON response
