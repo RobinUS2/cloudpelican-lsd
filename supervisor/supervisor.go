@@ -126,6 +126,9 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	args = append(args, "-e")
 	args = append(args, input)
 
+	// Format in blocks
+	fmt.Fprint(w, "```")
+
 	// Assemble JSON
 	cmd := exec.Command("cloudpelican", args...)
 	cmd.Stderr = os.Stdout // Redirect std error
@@ -146,6 +149,9 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	} else {
 		log.Printf("Command finished")
 	}
+
+	// End block
+	fmt.Fprint(w, "```")
 	fmt.Fprint(w, "") // Trailing white space to finish request
 }
 
