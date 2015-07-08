@@ -27,6 +27,7 @@ type Statistics struct {
 	colorRed       string
 	colorGreen     string
 	colorReset     string
+	colorEnabled   bool
 }
 
 func (s *Statistics) loadTerminalDimensions() {
@@ -34,9 +35,14 @@ func (s *Statistics) loadTerminalDimensions() {
 	cmd.Stdin = os.Stdin
 	out, err := cmd.Output()
 	if err != nil {
-		log.Printf("Failed to determine terminal dimensions, using default: %s", err)
-		s.terminalWidth = 200
-		s.terminalHeight = 100
+		log.Printf("Failed to determine terminal dimensions: %s", err)
+		log.Printf("Disabling color")
+		s.colorEnabled = false
+		s.terminalWidth = 100
+		s.terminalHeight = 50
+		if verbose {
+			log.Printf("Terminal dimension %dx%d (WxH)", s.terminalWidth, s.terminalHeight)
+		}
 		return
 	}
 	str := strings.TrimSpace(string(out))
@@ -62,6 +68,10 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 	// Colors
 	primaryColor := "green"
 	secondaryColor := "red"
+	if s.colorEnabled {
+		primaryColor = "reset"
+		secondaryColor = "reset"
+	}
 
 	// Primary sign
 	primarySign := "o"
@@ -206,6 +216,7 @@ func newStatistics() *Statistics {
 		verticalSep:   "|",
 		horizontalSep: "_",
 		colPad:        3,
+		colorEnabled:  true,
 		colorRed:      ansi.ColorCode("red"),
 		colorGreen:    ansi.ColorCode("green"),
 		colorReset:    ansi.ColorCode("reset"),
