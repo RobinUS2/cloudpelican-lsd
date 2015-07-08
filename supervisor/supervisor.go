@@ -149,6 +149,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var responseLines int64 = 0
 	var responseCharLimit int64 = 12 * 1024
 	var responseChars int64 = 0
+	truncated := make(chan bool, 1)
 	for scanner.Scan() {
 		txt := scanner.Text()
 		if verbose {
@@ -158,6 +159,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		responseChars += int64(len(txt))
 		if responseChars >= responseCharLimit {
 			fmt.Fprintln(w, "WARN! TRUNCATED OUTPUT")
+			truncated <- true
 			break
 		}
 		responseLines++
@@ -172,18 +174,21 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		done <- cmd.Wait()
 	}()
 	select {
+	case <-truncated:
 	case <-time.After(30 * time.Second):
 		if err := cmd.Process.Kill(); err != nil {
 			log.Fatal("failed to kill: ", err)
 		}
 		<-done // allow goroutine to exit
 		log.Println("process killed")
+		break
 	case err := <-done:
 		if err != nil {
 			log.Printf("Command Slack finished with error: %v", err)
 		} else {
 			log.Printf("Command Slack finished, written %d lines", responseLines)
 		}
+		break
 	}
 
 	// End block
