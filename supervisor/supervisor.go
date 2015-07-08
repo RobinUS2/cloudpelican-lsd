@@ -159,6 +159,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		responseChars += int64(len(txt))
 		if responseChars >= responseCharLimit {
 			fmt.Fprintln(w, "WARN! TRUNCATED OUTPUT")
+			log.Println("Slack output truncated")
 			truncated <- true
 			break
 		}
@@ -175,7 +176,8 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}()
 	select {
 	case <-truncated:
-	case <-time.After(30 * time.Second):
+	case <-time.After(5 * time.Second):
+		log.Println("killing process")
 		if err := cmd.Process.Kill(); err != nil {
 			log.Fatal("failed to kill: ", err)
 		}
