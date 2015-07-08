@@ -144,12 +144,19 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	log.Printf("Waiting for command Slack to finish...")
 	scanner := bufio.NewScanner(stdout)
 	var responseLines int64 = 0
+	var responseCharLimit int64 = 12 * 1024
+	var responseChars int64 = 0
 	for scanner.Scan() {
 		txt := scanner.Text()
 		if verbose {
 			log.Println(txt)
 		}
 		fmt.Fprintln(w, txt)
+		responseChars += int64(len(txt))
+		if responseChars >= responseCharLimit {
+			fmt.Fprintln(w, "WARN! TRUNCATED OUTPUT")
+			break
+		}
 		responseLines++
 	}
 	stdout.Close()
