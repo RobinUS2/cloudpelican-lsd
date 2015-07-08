@@ -83,10 +83,10 @@ func main() {
 			<-cmdFinishChan
 		}
 		restoreTerminalAndExit(term, oldState)
+	} else {
+		// Listen for user input
+		startConsole()
 	}
-
-	// Listen for user input
-	startConsole()
 }
 
 func startConsole() {
@@ -203,6 +203,7 @@ func _handleConsole(input string) bool {
 		showFilters()
 	} else if strings.Index(inputLower, "select ") == 0 {
 		executeSelect(inputLower)
+		return true
 	} else if strings.Index(inputLower, "cat ") == 0 {
 		executeGrepSQL(inputLower)
 	} else if strings.Index(inputLower, "create filter ") == 0 {
@@ -543,7 +544,6 @@ func executeSelect(input string) {
 				}
 			}
 		}
-		fmt.Printf(getConsoleWait())
 		cmdFinishChan <- true
 	}()
 }
