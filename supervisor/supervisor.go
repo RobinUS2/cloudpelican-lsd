@@ -86,9 +86,30 @@ func main() {
 	router.PUT("/admin/config", PutAdminConfig)                    // Set configuration value
 	router.POST("/bigquery/query", PostBigQueryExecute)            // Execute a query on bigquery, NOT JSON, response is TSV
 
+	// Slack handler: see https://api.slack.com/slash-commands
+	router.POST("/slack", PostSlack)
+
 	// Start webserver
 	log.Println(fmt.Sprintf("Starting supervisor service at port %d", serverPort))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+}
+
+// Slack handler
+func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// Validate
+	token := r.PostFormValue("token")
+	expectedToken := conf.GetNotEmpty("slack_token")
+	if verbose {
+		log.Printf("Slack token received %s", token)
+	}
+	if token != expectedToken {
+		log.Println("Invalid Slack token")
+		return
+	}
+	input := r.PostFormValue("text")
+	if verbose {
+		log.Printf("Slack input: %s", input)
+	}
 }
 
 // This is not a JSON response
