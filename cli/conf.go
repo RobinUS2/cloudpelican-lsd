@@ -20,7 +20,8 @@ type Conf struct {
 func (c *Conf) Save() {
 	b, je := json.Marshal(c)
 	if je != nil {
-		log.Fatal(fmt.Sprintf("Failed to save config %s", je))
+		log.Printf(fmt.Sprintf("Failed to save config %s", je))
+		return
 	}
 	ioutil.WriteFile(c.Path, b, 0600)
 }
@@ -41,11 +42,15 @@ func NewConf() *Conf {
 }
 
 func loadConf() (bool, error) {
+	// Init object
+	conf = NewConf()
+
+	// Load conf
 	var confPath string
 	if len(customConfPath) < 1 {
 		usr, err := user.Current()
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("Failed to determine home director: %s", err)
 			return false, nil
 		}
 		confPath = fmt.Sprintf("%s/.cloudpelican_lsd.conf", usr.HomeDir)
@@ -64,7 +69,12 @@ func loadConf() (bool, error) {
 			log.Printf("Creating new empty config file")
 		}
 		ioutil.WriteFile(confPath, make([]byte, 0), 0600)
-		confData, _ = ioutil.ReadFile(confPath)
+		var readErr error = nil
+		confData, readErr = ioutil.ReadFile(confPath)
+		if readErr != nil {
+			log.Printf("Failed to read configuration: %s", readErr)
+			return false, nil
+		}
 	}
 
 	// Print debug
@@ -74,7 +84,6 @@ func loadConf() (bool, error) {
 	}
 
 	// Init object
-	conf = NewConf()
 	conf.Load(confStr)
 	conf.Path = confPath
 
@@ -83,9 +92,12 @@ func loadConf() (bool, error) {
 		session = conf.PersistentSession
 		if len(session["supervisor_uri"]) > 0 {
 			if !silent {
-				fmt.Printf("Restored session to %s\n", session["supervisor_uri"])
+				fmt.Printf("Restoring session to %s\n", session["supervisor_uri"])
 			}
 			_connect(false)
+			if verbose {
+				fmt.Printf("Restored session to %s\n", session["supervisor_uri"])
+			}
 		}
 	}
 

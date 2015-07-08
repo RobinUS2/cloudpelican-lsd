@@ -34,7 +34,10 @@ func (s *Statistics) loadTerminalDimensions() {
 	cmd.Stdin = os.Stdin
 	out, err := cmd.Output()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Failed to determine terminal dimensions, using default: %s", err)
+		s.terminalWidth = 200
+		s.terminalHeight = 100
+		return
 	}
 	str := strings.TrimSpace(string(out))
 	split := strings.Split(str, " ")

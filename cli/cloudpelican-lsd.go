@@ -43,11 +43,13 @@ var term *terminal.Terminal
 var oldState *terminal.State
 var cmdFinishChan chan bool
 var multiLineInput bool = false
+var terminalRaw bool
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
 	flag.StringVar(&startupCommands, "e", "", "Commands to execute, seperated by semi-colon")
 	flag.BoolVar(&verbose, "v", false, "Verbose, debug mode")
+	flag.BoolVar(&terminalRaw, "raw-terminal", true, "Raw terminal mode")
 	flag.BoolVar(&silent, "silent", true, "Silent, no helping output mode")
 	flag.BoolVar(&allowAutoCreateFilter, "allow-temporary-filters", true, "Automatically create temporary filters from select statements")
 	flag.Parse()
@@ -60,20 +62,27 @@ func main() {
 
 	// Load config
 	loadConf()
+	if verbose {
+		log.Println("Loaded conf")
+	}
 
 	// Stats
 	stats = newStatistics()
+	if verbose {
+		log.Println("Init stats")
+	}
 
 	// Wait channel
 	cmdFinishChan = make(chan bool, 1)
 
 	// Startup commands
 	if len(startupCommands) > 0 {
+		terminalRaw = false // Disable terminal raw mode
 		wait := handleConsole(startupCommands)
 		if wait {
 			<-cmdFinishChan
 		}
-		//restoreTerminalAndExit(term, oldState)
+		restoreTerminalAndExit(term, oldState)
 	}
 
 	// Listen for user input
@@ -101,15 +110,29 @@ func startConsole() {
 	CONSOLE_KEYWORDS_OPTS["configure supervisor"] = 3 // configure supervisor + k=v
 
 	// Console reader
-	term, _ = terminal.NewWithStdInOut()
-	oldState, err := terminal.MakeRaw(0)
-	if err != nil {
-		panic(err)
+	if terminalRaw {
+		var termErr error = nil
+		term, termErr = terminal.NewWithStdInOut()
+		if termErr != nil {
+			log.Printf("WARN! Failed to init terminal. Error: %s", termErr)
+		} else {
+			var rawErr error = nil
+			oldState, rawErr = terminal.MakeRaw(0)
+			if rawErr != nil {
+				log.Printf("WARN! Failed to set terminal in raw mode, some functions might not be supported. Error: %s", rawErr)
+			} else {
+				// Finish terminal start
+				defer restoreTerminalAndExit(term, oldState)
+				term.SetPrompt("")
+
+				// Auto complete handler
+				term.AutoCompleteCallback = processAutocomplete
+
+				// Console wait
+				fmt.Printf("%s", getConsoleWait())
+			}
+		}
 	}
-	defer restoreTerminalAndExit(term, oldState)
-	term.SetPrompt("")
-	fmt.Printf("%s", getConsoleWait())
-	term.AutoCompleteCallback = processAutocomplete
 
 	// Main loop
 	var lineBuffer bytes.Buffer

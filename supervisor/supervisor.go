@@ -121,12 +121,13 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// Args
-	// args := make([]string, 0)
-	// args = append(args, "-e")
-	// args = append(args, input)
+	args := make([]string, 0)
+	args = append(args, "--silent=true")
+	args = append(args, "-e")
+	args = append(args, input)
 
 	// Assemble JSON
-	cmd := exec.Command("./run_cloudpelican_cli.sh", "help")
+	cmd := exec.Command("cloudpelican", args...)
 	cmd.Stderr = os.Stdout // Redirect std error
 	stdout, _ := cmd.StdoutPipe()
 	err := cmd.Start()
