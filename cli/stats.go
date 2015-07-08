@@ -190,8 +190,12 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 		}
 		buf.WriteString("\n") // Close previous line
 	}
-	buf.WriteString("\n")         // Final whiteline
-	buf.WriteString(s.colorReset) // Reset color
+	buf.WriteString("\n") // Final whiteline
+
+	// Reset color
+	if s.colorEnabled {
+		buf.WriteString(s.colorReset)
+	}
 
 	return buf.String(), nil
 }
