@@ -143,6 +143,12 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		log.Fatal(err)
 	}
 
+	// Timeout
+	go func() {
+		time.Sleep(10 * time.Second)
+		cmd.Process.Kill()
+	}()
+
 	// Read output and write over buffer
 	log.Printf("Waiting for command Slack to finish...")
 	scanner := bufio.NewScanner(stdout)
@@ -165,12 +171,6 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Close output stream
 	stdout.Close()
-
-	// Timeout
-	go func() {
-		time.Sleep(10 * time.Second)
-		cmd.Process.Kill()
-	}()
 
 	// Wait for it
 	err = cmd.Wait()
