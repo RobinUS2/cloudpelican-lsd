@@ -744,6 +744,9 @@ func connect(uri string) {
 }
 
 func clearConsole() {
+	if !terminalRaw {
+		return
+	}
 	c := exec.Command("clear")
 	c.Stdout = os.Stdout
 	c.Run()
