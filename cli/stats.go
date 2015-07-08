@@ -197,6 +197,9 @@ func (s *Statistics) RenderChart(filter *Filter, inputData map[int]map[int64]int
 }
 
 func (s *Statistics) colorStr(currentColor string, desiredColorName string, str string) (string, string) {
+	if !s.colorEnabled {
+		return desiredColorName, str
+	}
 	if currentColor == desiredColorName {
 		return currentColor, str
 	}
