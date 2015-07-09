@@ -44,6 +44,7 @@ var oldState *terminal.State
 var cmdFinishChan chan bool
 var multiLineInput bool = false
 var terminalRaw bool
+var nonInteractive bool = false
 
 func init() {
 	flag.StringVar(&customConfPath, "c", "", "Path to configuration file (default in your home folder)")
@@ -77,7 +78,8 @@ func main() {
 
 	// Startup commands
 	if len(startupCommands) > 0 {
-		terminalRaw = false // Disable terminal raw mode
+		nonInteractive = true // Non-interactive mode
+		terminalRaw = false   // Disable terminal raw mode
 		wait := handleConsole(startupCommands)
 		if wait {
 			<-cmdFinishChan
@@ -545,6 +547,9 @@ func executeSelect(input string) {
 			}
 		}
 		cmdFinishChan <- true
+		if nonInteractive == false {
+			fmt.Printf("%s", getConsoleWait())
+		}
 	}()
 }
 
