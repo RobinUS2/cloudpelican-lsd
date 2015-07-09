@@ -66,6 +66,7 @@ func (g *GrepSQL) Parse() (string, error) {
 	var previousTokens []string = make([]string, 0)
 	var i int = 0
 	var sort bool = false
+	var sortDirection string = "ASC"
 	var head bool = false
 	var limit bool = false
 	var limitVal string = ""
@@ -107,6 +108,8 @@ func (g *GrepSQL) Parse() (string, error) {
 				}
 			} else if previousTokens[i-1] == "limit" {
 				limitVal = token
+			} else if sort && previousTokens[i-2] == "sort" && previousTokens[i-1] == "-" && token == "r" {
+				sortDirection = "DESC"
 			} else if previousTokens[i-1] == "-" && currentCmd != nil {
 				// Flag
 				if token != "v" && token != "e" && token != "i" {
@@ -181,7 +184,7 @@ func (g *GrepSQL) Parse() (string, error) {
 
 	// Sort
 	if sort {
-		qBuf.WriteString(" ORDER BY _raw ASC")
+		qBuf.WriteString(fmt.Sprintf(" ORDER BY _raw %s", sortDirection))
 	}
 
 	// Header
