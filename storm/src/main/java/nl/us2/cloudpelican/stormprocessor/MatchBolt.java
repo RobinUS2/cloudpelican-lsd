@@ -183,7 +183,11 @@ public class MatchBolt extends BaseRichBolt {
 
 
     public void executeTuple(Tuple tuple) {
-        String msg = tuple.getString(0).trim();
+        String msg = tuple.getString(0);
+        if (msg == null) {
+            return;
+        }
+        msg = msg.trim();
         if (msg.isEmpty()) {
             return;
         }

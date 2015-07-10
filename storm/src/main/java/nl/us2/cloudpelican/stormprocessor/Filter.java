@@ -35,6 +35,11 @@ public class Filter {
     }
 
     public boolean isValid() {
+        // ID must be hex UUID (e.g. 1cb4978b-b2e1-44c3-a007-8c0c7fb57e82)
+        if (Id().length() != 36) {
+            return false;
+        }
+
         // Is this a temp filter which is old?
         if (name.startsWith("__tmp__")) {
             String tsStr = name.substring(7);
