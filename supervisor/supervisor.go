@@ -186,6 +186,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				log.Println(txt)
 			}
 			buf.WriteString(txt)
+			buf.WriteString("\n")
 			responseChars += int64(len(txt))
 			if responseChars >= responseCharLimit {
 				buf.WriteString("WARN! TRUNCATED OUTPUT")
