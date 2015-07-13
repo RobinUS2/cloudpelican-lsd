@@ -160,7 +160,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	go func() {
 		// Timeout after 2.5 second (Slack timeout is 3 seconds)
 		time.Sleep(2500 * time.Millisecond)
-		responseChan <- "Async"
+		responseChan <- "Hang tight while we compute your request!"
 
 		// Kill process after X seconds
 		go func() {
