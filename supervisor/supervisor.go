@@ -136,7 +136,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var webhookResponse bool = false // False means we output directly
 
 	// Format in blocks
-	var buf *bytes.Buffer
+	var buf bytes.Buffer
 	if webhookResponse == false {
 		buf.WriteString("```")
 	}
@@ -155,6 +155,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		// Timeout after 2.5 second (Slack timeout is 3 seconds)
 		time.Sleep(2500 * time.Millisecond)
 		fmt.Fprintf(w, "Async")
+		fmt.Fprintf(w, "")
 
 		// Kill process after X seconds
 		go func() {
