@@ -205,7 +205,14 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		buf.WriteString("```")
 
 		// Write response
-		responseChan <- buf.String()
+		responseWrittenMux.RLock()
+		if responseWritten {
+			// Send async
+		} else {
+			// Write to ouptut
+			responseChan <- buf.String()
+		}
+		responseWrittenMux.RUnlock()
 	}()
 
 	// Output
