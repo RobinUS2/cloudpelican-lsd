@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -123,6 +124,9 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		log.Printf("Slack input: %s", input)
 	}
 
+	// Slack user
+	slackUser := r.PostFormValue("user_name")
+
 	// Args
 	args := make([]string, 0)
 	if verbose {
@@ -209,11 +213,24 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		if responseWritten {
 			// Request
 			var reqBody *bytes.Buffer
-			reqBody = bytes.NewBuffer([]byte("payload={\"channel\": \"#logging\", \"username\": \"CloudPelican\", \"text\": \"Test\", \"icon_emoji\": \":ghost:\"}"))
-			log.Printf("%s", reqBody.Bytes())
+			// {\"channel\": \"#logging\", \"username\": \"CloudPelican\", \"text\": \"Test\", \"icon_emoji\": \":ghost:\"}
+			var jsonData map[string]string = make(map[string]string)
+			jsonData["channel"] = fmt.Sprintf("@%s", slackUser)
+			jsonData["username"] = "CloudPelican"
+			jsonData["text"] = buf.String()
+			jsonData["icon_emoji"] = ":ghost:"
+			jsonBytes, jsonE := json.Marshal(jsonData)
+			if jsonE != nil {
+				log.Printf("Failed Slack async json: %s", jsonE)
+				return
+			}
+			reqBody = bytes.NewBuffer([]byte(fmt.Sprintf("payload=%s", url.QueryEscape(fmt.Sprintf("%s", jsonBytes)))))
+			if verbose {
+				log.Printf("%s", reqBody.Bytes())
+			}
 			resp, respErr := http.Post("https://hooks.slack.com/services/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", "application/x-www-form-urlencoded", reqBody)
 			if respErr != nil {
-				log.Printf("Failed Slack async: %s", respErr)
+				log.Printf("Failed Slack async request: %s", respErr)
 				return
 			}
 			log.Printf("%v", resp)
