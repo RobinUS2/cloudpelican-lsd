@@ -18,7 +18,7 @@ import (
 type FilterManager struct {
 	db                  *bolt.DB
 	filterTable         string
-	filterResults       map[string][]string
+	filterResults       map[string][]*FilterResult
 	filterStatsTable    string
 	filterStats         map[string]*FilterStats
 	filterOutliersTable string
@@ -26,6 +26,10 @@ type FilterManager struct {
 	// Caches
 	filtersCache    []*Filter
 	filtersCacheMux sync.RWMutex
+}
+
+type FilterResult struct {
+	fields map[string]string
 }
 
 type FilterStats struct {
@@ -47,9 +51,9 @@ type Filter struct {
 	statsMux   sync.RWMutex
 }
 
-func (f *Filter) Results() []string {
+func (f *Filter) Results() []*FilterResult {
 	if filterManager.filterResults[f.Id] == nil {
-		filterManager.filterResults[f.Id] = make([]string, 0)
+		filterManager.filterResults[f.Id] = make([]*FilterResult, 0)
 	}
 	return filterManager.filterResults[f.Id]
 }
@@ -242,7 +246,7 @@ func (f *Filter) AddResults(res []string) bool {
 
 	// Init variable
 	if filterManager.filterResults[f.Id] == nil {
-		filterManager.filterResults[f.Id] = make([]string, 0)
+		filterManager.filterResults[f.Id] = make([]*FilterResult, 0)
 	}
 
 	// Exceed limit?
@@ -253,7 +257,7 @@ func (f *Filter) AddResults(res []string) bool {
 		if verbose {
 			log.Printf("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
 		}
-		tmp := make([]string, 0)
+		tmp := make([]*FilterResult, 0)
 		tooMany := newPlusCurrent - maxMsgMemory
 		for i := tooMany; i < currentCount-1; i++ {
 			tmp = append(tmp, filterManager.filterResults[f.Id][i])
@@ -264,7 +268,9 @@ func (f *Filter) AddResults(res []string) bool {
 	// Add lines
 	// @todo It is possible that there is a big resultset immediately overflow maxMsgMemory
 	for _, line := range res {
-		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], line)
+		res := newFilterResult()
+		res.fields["_raw"] = line
+		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], res)
 	}
 	f.resultsMux.Unlock()
 	return true
@@ -532,7 +538,7 @@ func NewFilterManager() *FilterManager {
 		filterTable:         "filters",
 		filterStatsTable:    "filter_stats",
 		filterOutliersTable: "filter_outliers",
-		filterResults:       make(map[string][]string),
+		filterResults:       make(map[string][]*FilterResult),
 		filterStats:         make(map[string]*FilterStats),
 	}
 	fm.Open()
@@ -543,6 +549,12 @@ func NewFilterManager() *FilterManager {
 func newFilter() *Filter {
 	return &Filter{
 		Stats: newFilterStats(),
+	}
+}
+
+func newFilterResult() *FilterResult {
+	return &FilterResult{
+		fields: make(map[string]string),
 	}
 }
 
