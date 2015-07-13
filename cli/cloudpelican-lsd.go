@@ -505,8 +505,11 @@ func executeSelect(input string, opts map[string]string) {
 		<-cmdFinishChan
 	}
 
+	// Offset
+	offset := uint64(0)
+
 	// Stream data
-	uri := fmt.Sprintf("filter/%s/result", filter.Id)
+	uri := fmt.Sprintf("filter/%s/result?result_offset=%d", filter.Id, offset)
 	var resultCount int64 = 0
 	go func() {
 		var resultBuffer []string = nil
@@ -552,6 +555,22 @@ func executeSelect(input string, opts map[string]string) {
 				}
 				continue
 			}
+
+			// Validate status
+			if fmt.Sprintf("%s", res["status"]) != "OK" {
+				if verbose {
+					fmt.Printf("Error while fetching results. Status not OK")
+				}
+				continue
+			}
+
+			// Get offset
+			offsetStr := fmt.Sprintf("%s", res["result_offset"])
+			offsetS, offsetE := strconv.ParseInt(offsetStr, 10, 64)
+			if offsetE == nil {
+				offset = uint64(offsetS)
+			}
+
 			// Array of objects
 			list := res["results"].([]interface{})
 
