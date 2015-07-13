@@ -219,7 +219,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			jsonData["channel"] = fmt.Sprintf("@%s", slackUser)
 			jsonData["username"] = "CloudPelican"
 			jsonData["text"] = buf.String()
-			jsonData["icon_emoji"] = ":ghost:"
+			jsonData["icon_emoji"] = ":cloud:"
 			jsonBytes, jsonE := json.Marshal(jsonData)
 			if jsonE != nil {
 				log.Printf("Failed Slack async json: %s", jsonE)
