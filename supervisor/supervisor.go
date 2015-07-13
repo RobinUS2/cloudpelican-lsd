@@ -179,6 +179,11 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		}()
 	}()
 
+	// Direct response in case of share
+	if shareSlack {
+		responseChan <- ""
+	}
+
 	// Read output and write over buffer
 	go func() {
 		log.Printf("Waiting for command Slack to finish...")
