@@ -222,7 +222,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			var reqBody *bytes.Buffer
 			// {\"channel\": \"#logging\", \"username\": \"CloudPelican\", \"text\": \"Test\", \"icon_emoji\": \":ghost:\"}
 			var jsonData map[string]string = make(map[string]string)
-			if shareSlack {
+			if shareSlack && !strings.HasPrefix(slackChannel, "@") {
 				jsonData["channel"] = fmt.Sprintf("#%s", slackChannel)
 			} else {
 				// Private message
