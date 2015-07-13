@@ -16,12 +16,14 @@ import (
 )
 
 type FilterManager struct {
-	db                  *bolt.DB
-	filterTable         string
-	filterResults       map[string][]*FilterResult
-	filterStatsTable    string
-	filterStats         map[string]*FilterStats
-	filterOutliersTable string
+	db                      *bolt.DB
+	filterTable             string
+	filterResults           map[string][]*FilterResult
+	filterResultCounters    map[string]uint64
+	filterResultCountersMux sync.RWMutex
+	filterStatsTable        string
+	filterStats             map[string]*FilterStats
+	filterOutliersTable     string
 
 	// Caches
 	filtersCache    []*Filter
@@ -29,6 +31,7 @@ type FilterManager struct {
 }
 
 type FilterResult struct {
+	id     uint64
 	fields map[string]string
 }
 
@@ -240,6 +243,23 @@ func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
 	return err == nil
 }
 
+// New result for this filter
+func (f *Filter) newFilterResult(raw string) *FilterResult {
+	// Get auto-increment key
+	filterManager.filterResultCountersMux.Lock()
+	filterManager.filterResultCounters[f.Id]++
+	id := filterManager.filterResultCounters[f.Id]
+	filterManager.filterResultCountersMux.Unlock()
+
+	// Init
+	elm := &FilterResult{
+		id:     id,
+		fields: make(map[string]string),
+	}
+	elm.fields["_raw"] = raw
+	return elm
+}
+
 // @todo Support multiple adapters for storage of results, currently only in memory
 func (f *Filter) AddResults(res []string) bool {
 	f.resultsMux.Lock()
@@ -268,8 +288,7 @@ func (f *Filter) AddResults(res []string) bool {
 	// Add lines
 	// @todo It is possible that there is a big resultset immediately overflow maxMsgMemory
 	for _, line := range res {
-		res := newFilterResult()
-		res.fields["_raw"] = line
+		res := f.newFilterResult(line)
 		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], res)
 	}
 	f.resultsMux.Unlock()
@@ -535,11 +554,12 @@ func filterFromJson(b []byte) *Filter {
 // Init the filter manager
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:         "filters",
-		filterStatsTable:    "filter_stats",
-		filterOutliersTable: "filter_outliers",
-		filterResults:       make(map[string][]*FilterResult),
-		filterStats:         make(map[string]*FilterStats),
+		filterTable:          "filters",
+		filterStatsTable:     "filter_stats",
+		filterOutliersTable:  "filter_outliers",
+		filterResults:        make(map[string][]*FilterResult),
+		filterResultCounters: make(map[string]uint64),
+		filterStats:          make(map[string]*FilterStats),
 	}
 	fm.Open()
 	fm.TimeseriesCleaner()
@@ -549,12 +569,6 @@ func NewFilterManager() *FilterManager {
 func newFilter() *Filter {
 	return &Filter{
 		Stats: newFilterStats(),
-	}
-}
-
-func newFilterResult() *FilterResult {
-	return &FilterResult{
-		fields: make(map[string]string),
 	}
 }
 
