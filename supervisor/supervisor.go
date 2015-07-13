@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -151,6 +152,8 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// Output channel
+	var responseWritten bool = false
+	var responseWrittenMux sync.RWMutex
 	responseChan := make(chan string, 1)
 
 	// Timeout
@@ -207,7 +210,12 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Output
 	resp := <-responseChan
-	fmt.Fprint(w, resp)
+	responseWrittenMux.Lock()
+	if responseWritten == false {
+		responseWritten = true
+		fmt.Fprint(w, resp)
+	}
+	responseWrittenMux.Unlock()
 }
 
 // This is not a JSON response
