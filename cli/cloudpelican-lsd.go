@@ -594,7 +594,7 @@ func executeSelect(input string, opts map[string]string) {
 			}
 
 			// In case we use the buffer, stop if we have zero more requests
-			if len(list) < 1 && resultBuffer != nil && len(resultBuffer) >= int(limit) {
+			if resultBuffer != nil && len(resultBuffer) >= int(limit) {
 				// Print last X items from buffer
 				for _, elm := range resultBuffer[len(resultBuffer)-int(limit):] {
 					fmt.Printf("%s\n", elm)
