@@ -204,7 +204,7 @@ func _handleConsole(input string) bool {
 	} else if inputLower == "show filters" {
 		showFilters()
 	} else if strings.Index(inputLower, "select ") == 0 {
-		executeSelect(inputLower)
+		executeSelect(inputLower, nil)
 		return true
 	} else if strings.Index(inputLower, "cat ") == 0 {
 		executeGrepSQL(inputLower)
@@ -237,7 +237,9 @@ func _handleConsole(input string) bool {
 			printConsoleError(input)
 			return false
 		}
-		executeSelect(fmt.Sprintf("select * from %s", split[1]))
+		opts := make(map[string]string)
+		opts["tail"] = "1"
+		executeSelect(strings.ToLower(fmt.Sprintf("SELECT * FROM %s", split[1])), opts)
 		return true
 	} else if strings.Index(inputLower, "search ") == 0 {
 		split := strings.SplitN(input, "search ", 2)
@@ -433,7 +435,7 @@ func showFilters() {
 
 // Select execution, example input: "select * from <filter_name> [limit 1234]" [] indicates optional
 // example input from stream: "select * from stream:<stream_name> [limit 1234]" [] indicates optional
-func executeSelect(input string) {
+func executeSelect(input string, opts map[string]string) {
 	// Basic parsing
 	var filterName string = ""
 	var where string = ".*"
@@ -507,7 +509,19 @@ func executeSelect(input string) {
 	uri := fmt.Sprintf("filter/%s/result", filter.Id)
 	var resultCount int64 = 0
 	go func() {
-		fmt.Println()
+		var resultBuffer []string = nil
+
+		// Use result buffer if this is a tail set
+		if opts != nil && opts["tail"] == "1" && limit > 0 {
+			resultBuffer = make([]string, 0)
+		}
+
+		// Whitespace
+		if !nonInteractive {
+			fmt.Println()
+		}
+
+		// Loop
 	outer:
 		for {
 			// Handle interrup
@@ -529,6 +543,7 @@ func executeSelect(input string) {
 				}
 				continue
 			}
+			// Parse result JSON
 			var res map[string]interface{}
 			jE := json.Unmarshal([]byte(data), &res)
 			if jE != nil {
@@ -537,13 +552,35 @@ func executeSelect(input string) {
 				}
 				continue
 			}
+			// Array of objects
 			list := res["results"].([]interface{})
+
+			// Iterate results
 			for _, elm := range list {
-				fmt.Printf("%s\n", elm)
+				elmStr := fmt.Sprintf("%s", elm)
+				if resultBuffer == nil {
+					// Write directly to output
+					fmt.Printf("%s\n", elmStr)
+				} else {
+					// Into buffer
+					resultBuffer = append(resultBuffer, elmStr)
+				}
+				// Increment count
 				resultCount++
-				if limit != -1 && resultCount >= limit {
+
+				// Done?
+				if resultBuffer == nil && limit != -1 && resultCount >= limit {
 					break outer
 				}
+			}
+
+			// In case we use the buffer, stop if we have zero more requests
+			if len(list) < 1 && resultBuffer != nil && len(resultBuffer) >= int(limit) {
+				// Print last X items from buffer
+				for _, elm := range resultBuffer[len(resultBuffer)-int(limit):] {
+					fmt.Printf("%s\n", elm)
+				}
+				break outer
 			}
 		}
 		cmdFinishChan <- true
