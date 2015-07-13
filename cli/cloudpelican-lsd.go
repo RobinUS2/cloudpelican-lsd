@@ -509,7 +509,6 @@ func executeSelect(input string, opts map[string]string) {
 	offset := uint64(0)
 
 	// Stream data
-	uri := fmt.Sprintf("filter/%s/result?result_offset=%d", filter.Id, offset)
 	var resultCount int64 = 0
 	go func() {
 		var resultBuffer []string = nil
@@ -537,8 +536,13 @@ func executeSelect(input string, opts map[string]string) {
 				}
 				break
 			}
-
+			// Sleep
 			time.Sleep(200 * time.Millisecond) // @todo dynamic
+
+			// Update URL
+			uri := fmt.Sprintf("filter/%s/result?result_offset=%d", filter.Id, offset)
+
+			// Fetch
 			data, respErr := supervisorCon._get(uri)
 			if respErr != nil {
 				if verbose {
@@ -564,15 +568,17 @@ func executeSelect(input string, opts map[string]string) {
 				continue
 			}
 
-			// Get offset
-			offsetStr := fmt.Sprintf("%s", res["result_offset"])
-			offsetS, offsetE := strconv.ParseInt(offsetStr, 10, 64)
-			if offsetE == nil {
-				offset = uint64(offsetS)
-			}
-
 			// Array of objects
 			list := res["results"].([]interface{})
+
+			// Update offset only if we have results
+			if len(list) > 0 {
+				offsetStr := fmt.Sprintf("%f", res["result_offset"])
+				offsetS, offsetE := strconv.ParseFloat(offsetStr, 64)
+				if offsetE == nil {
+					offset = uint64(offsetS)
+				}
+			}
 
 			// Iterate results
 			for _, elm := range list {
