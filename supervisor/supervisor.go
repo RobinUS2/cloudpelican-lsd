@@ -351,36 +351,66 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		return
 	}
 	jresp := jresp.NewJsonResp()
+
+	// Validate ID
 	id := strings.TrimSpace(ps.ByName("id"))
 	if len(id) < 1 {
 		jresp.Error("Please provide an ID")
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
+
+	// Get filter
 	filter := filterManager.GetFilter(id)
 	if filter == nil {
 		jresp.Error(fmt.Sprintf("Filter %s not found", id))
 		fmt.Fprint(w, jresp.ToString(false))
 		return
 	}
-	var clearResults bool = false
-	filter.resultsMux.RLock()
-	clearResults = len(filter.Results()) > 0
-	lines := make([]string, 0)
-	for _, result := range filter.Results() {
-		lines = append(lines, result.fields["_raw"])
+
+	// Minimum ID
+	offsetStr := r.URL.Query().Get("result_offset")
+	if len(offsetStr) < 1 {
+		jresp.Error("Please provide a result offset")
+		fmt.Fprint(w, jresp.ToString(false))
+		return
 	}
-	jresp.Set("results", lines)
+	offsetS, offsetE := strconv.ParseInt(offsetStr, 10, 64)
+	if offsetE != nil {
+		jresp.Error(fmt.Sprintf("Please provide a valid result offset: %s", offsetE))
+		fmt.Fprint(w, jresp.ToString(false))
+		return
+	}
+	offset := uint64(offsetS)
+
+	// Get results
+	filter.resultsMux.RLock()
+	results := filter.Results()
 	filter.resultsMux.RUnlock()
+
+	// Build response lines
+	lines := make([]string, 0)
+	resultsMaxOffset := uint64(0)
+	for _, result := range results {
+		// Skip all below  or equal to offset
+		if result.id <= offset {
+			continue
+		}
+
+		// Add line
+		lines = append(lines, result.fields["_raw"])
+
+		// Keep track of maximum
+		if result.id > resultsMaxOffset {
+			resultsMaxOffset = result.id
+		}
+	}
+
+	// Format
+	jresp.Set("result_offset", resultsMaxOffset)
+	jresp.Set("results", lines)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
-
-	// Clear results
-	if clearResults {
-		filter.resultsMux.Lock()
-		filterManager.filterResults[filter.Id] = make([]*FilterResult, 0)
-		filter.resultsMux.Unlock()
-	}
 }
 
 func GetFilterStats(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
