@@ -207,21 +207,11 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		// Write response
 		responseWrittenMux.RLock()
 		if responseWritten {
-			// Send async
-			client := &http.Client{}
-
 			// Request
 			var reqBody *bytes.Buffer
 			reqBody = bytes.NewBuffer([]byte("payload={\"channel\": \"#logging\", \"username\": \"CloudPelican\", \"text\": \"Test\", \"icon_emoji\": \":ghost:\"}"))
 			log.Printf("%s", reqBody.Bytes())
-			req, err := http.NewRequest("POST", "https://hooks.slack.com/services/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", reqBody)
-			if err != nil {
-				log.Printf("Failed Slack async: %s", err)
-				return
-			}
-
-			// Execute
-			resp, respErr := client.Do(req)
+			resp, respErr := http.Post("https://hooks.slack.com/services/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", "application/x-www-form-urlencoded", reqBody)
 			if respErr != nil {
 				log.Printf("Failed Slack async: %s", respErr)
 				return
