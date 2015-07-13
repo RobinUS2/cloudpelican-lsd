@@ -120,8 +120,13 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Collect input
 	input := r.PostFormValue("text")
+	shareSlack := strings.Contains(input, "+share")
 	if verbose {
 		log.Printf("Slack input: %s", input)
+	}
+
+	if shareSlack {
+		input = strings.TrimSpace(strings.Replace(input, "+share", "", 1))
 	}
 
 	// Slack user
@@ -212,13 +217,12 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 		// Write response
 		responseWrittenMux.RLock()
-		share := strings.Contains(input, "+share")
-		if responseWritten || share {
+		if responseWritten || shareSlack {
 			// Request
 			var reqBody *bytes.Buffer
 			// {\"channel\": \"#logging\", \"username\": \"CloudPelican\", \"text\": \"Test\", \"icon_emoji\": \":ghost:\"}
 			var jsonData map[string]string = make(map[string]string)
-			if share {
+			if shareSlack {
 				jsonData["channel"] = fmt.Sprintf("#%s", slackChannel)
 			} else {
 				// Private message
