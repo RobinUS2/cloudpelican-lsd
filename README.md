@@ -71,6 +71,14 @@ $ cloudpelican> save
 Saved session
 ```
 
+# Slack Integration #
+CloudPelican is tightly integrated with [Slack](https://slack.com/). This means you can use the entire feature set directly from the Slack application, both web and mobile! Make sure to setup a [Slash Command](https://flxone.slack.com/services/new/slash-commands) and an [Incoming Webhook](https://flxone.slack.com/services/new/incoming-webhook). Then configure your supervisor.
+
+```
+$ cloudpelican> configure supervisor slack_token=<slack_slash_command_token>
+$ cloudpelican> configure supervisor slack_incoming_webhook=<slack_incoming_webhook_url>
+```
+
 # Data Flow #
 [application] => [rsyslog on host] => [kafka] => [storm] => [cloudpelican supervisor] => [cloudpelican CLI]
 
