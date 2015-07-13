@@ -229,7 +229,7 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 			if verbose {
 				log.Printf("%s", reqBody.Bytes())
 			}
-			resp, respErr := http.Post("https://hooks.slack.com/services/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", "application/x-www-form-urlencoded", reqBody)
+			resp, respErr := http.Post(conf.GetNotEmpty("slack_incoming_webhook"), "application/x-www-form-urlencoded", reqBody)
 			if respErr != nil {
 				log.Printf("Failed Slack async request: %s", respErr)
 				return
