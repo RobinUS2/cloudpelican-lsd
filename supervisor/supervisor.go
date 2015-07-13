@@ -234,7 +234,9 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 				log.Printf("Failed Slack async request: %s", respErr)
 				return
 			}
-			log.Printf("%v", resp)
+			if verbose {
+				log.Printf("Slack response: %v", resp)
+			}
 		} else {
 			// Write to ouptut
 			responseChan <- buf.String()
