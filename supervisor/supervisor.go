@@ -150,12 +150,14 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		log.Fatal(err)
 	}
 
+	// Output channel
+	responseChan := make(chan string, 1)
+
 	// Timeout
 	go func() {
 		// Timeout after 2.5 second (Slack timeout is 3 seconds)
 		time.Sleep(2500 * time.Millisecond)
-		fmt.Fprintf(w, "Async")
-		fmt.Fprintf(w, "")
+		responseChan <- "Async"
 
 		// Kill process after X seconds
 		go func() {
@@ -165,41 +167,47 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}()
 
 	// Read output and write over buffer
-	log.Printf("Waiting for command Slack to finish...")
-	scanner := bufio.NewScanner(stdout)
-	var responseLines int64 = 0
-	var responseCharLimit int64 = 12 * 1024
-	var responseChars int64 = 0
-	for scanner.Scan() {
-		txt := scanner.Text()
-		if verbose {
-			log.Println(txt)
+	go func() {
+		log.Printf("Waiting for command Slack to finish...")
+		scanner := bufio.NewScanner(stdout)
+		var responseLines int64 = 0
+		var responseCharLimit int64 = 12 * 1024
+		var responseChars int64 = 0
+		for scanner.Scan() {
+			txt := scanner.Text()
+			if verbose {
+				log.Println(txt)
+			}
+			buf.WriteString(txt)
+			responseChars += int64(len(txt))
+			if responseChars >= responseCharLimit {
+				buf.WriteString("WARN! TRUNCATED OUTPUT")
+				break
+			}
+			responseLines++
 		}
-		buf.WriteString(txt)
-		responseChars += int64(len(txt))
-		if responseChars >= responseCharLimit {
-			buf.WriteString("WARN! TRUNCATED OUTPUT")
-			break
+
+		// Close output stream
+		stdout.Close()
+
+		// Wait for it
+		err = cmd.Wait()
+		if err != nil {
+			log.Printf("Command Slack finished with error: %v", err)
+		} else {
+			log.Printf("Command Slack finished, written %d lines", responseLines)
 		}
-		responseLines++
-	}
 
-	// Close output stream
-	stdout.Close()
+		// End block
+		buf.WriteString("```")
 
-	// Wait for it
-	err = cmd.Wait()
-	if err != nil {
-		log.Printf("Command Slack finished with error: %v", err)
-	} else {
-		log.Printf("Command Slack finished, written %d lines", responseLines)
-	}
-
-	// End block
-	buf.WriteString("```")
+		// Write response
+		responseChan <- buf.String()
+	}()
 
 	// Output
-	fmt.Fprint(w, buf.String())
+	resp := <-responseChan
+	fmt.Fprint(w, resp)
 }
 
 // This is not a JSON response
