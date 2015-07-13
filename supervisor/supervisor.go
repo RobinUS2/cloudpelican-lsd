@@ -7,6 +7,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -131,8 +132,14 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	args = append(args, "-e")
 	args = append(args, input)
 
+	// Output method
+	var webhookResponse bool = false // False means we output directly
+
 	// Format in blocks
-	fmt.Fprint(w, "```")
+	var buf *bytes.Buffer
+	if webhookResponse == false {
+		buf.WriteString("```")
+	}
 
 	// Assemble JSON
 	cmd := exec.Command("cloudpelican", args...)
@@ -145,8 +152,15 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	// Timeout
 	go func() {
-		time.Sleep(30 * time.Second)
-		cmd.Process.Kill()
+		// Timeout after 2.5 second (Slack timeout is 3 seconds)
+		time.Sleep(2500 * time.Millisecond)
+		fmt.Fprintf(w, "Async")
+
+		// Kill process after X seconds
+		go func() {
+			time.Sleep(30 * time.Second)
+			cmd.Process.Kill()
+		}()
 	}()
 
 	// Read output and write over buffer
@@ -160,10 +174,10 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		if verbose {
 			log.Println(txt)
 		}
-		fmt.Fprintln(w, txt)
+		buf.WriteString(txt)
 		responseChars += int64(len(txt))
 		if responseChars >= responseCharLimit {
-			fmt.Fprintln(w, "WARN! TRUNCATED OUTPUT")
+			buf.WriteString("WARN! TRUNCATED OUTPUT")
 			break
 		}
 		responseLines++
@@ -181,8 +195,10 @@ func PostSlack(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	// End block
-	fmt.Fprint(w, "```")
-	fmt.Fprint(w, "") // Trailing white space to finish request
+	buf.WriteString("```")
+
+	// Output
+	fmt.Fprint(w, buf.String())
 }
 
 // This is not a JSON response
