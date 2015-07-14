@@ -35,15 +35,15 @@ public class Filter {
         if (Pattern.compile("^(\\(\\?i\\))?[A-Za-z0-9_\\-]+$").matcher(regexStr).matches()) {
             // Case insensitive
             if (regexStr.indexOf("(?i)") == 0) {
-                LOG.info("Detected lowercase, new regex " + regexStr);
                 regexStr = regexStr.replace("(?i)", "");
                 lowercase = true;
+                LOG.info("Detected lowercase, new regex " + regexStr);
             }
 
             // Very simple word-style matching
             if (Pattern.compile("^[A-Za-z0-9_\\-]+$").matcher(regexStr).matches()) {
-                LOG.info("Matching with indexOf() enabled for " + regexStr);
                 useIndexOf = true;
+                LOG.info("Matching with indexOf() enabled for " + regexStr);
             }
         }
 
