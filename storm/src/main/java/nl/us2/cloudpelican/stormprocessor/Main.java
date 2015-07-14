@@ -67,7 +67,7 @@ public class Main {
 
         // Default settings
         if (!argsMap.containsKey("kafka_consumer_id")) {
-            argsMap.put("kafka_consumer_id", "default_cloudpelican_lsd_consumer");
+            argsMap.put("kafka_consumer_id", "cloudpelican_lsd_consumer");
         }
 
         // Settings object

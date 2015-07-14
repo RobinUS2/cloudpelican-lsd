@@ -17,6 +17,7 @@ public class Filter {
     private final String name;
     private Pattern pattern;
     private Matcher matcher;
+    private boolean useIndexOf = false;
 
     private static final Logger LOG = LoggerFactory.getLogger(Filter.class);
 
@@ -27,7 +28,16 @@ public class Filter {
     }
 
     public void compileRegex() {
-        pattern = Pattern.compile(obj.get("regex").getAsString());
+        // Get regex string
+        String regexStr = obj.get("regex").getAsString();
+
+        // Is this just a word or so to match?
+        if (Pattern.compile("^[A-z0-9_-]+$").matcher(regexStr).matches()) {
+            System.out.println("Super simple " + regexStr);
+        }
+
+        // Compile pattern
+        pattern = Pattern.compile(regexStr);
     }
 
     public String Id() {
@@ -62,5 +72,11 @@ public class Filter {
             return matcher;
         }
         return matcher.reset(msg);
+    }
+
+    public boolean matches(String msg) {
+        Matcher m = Matcher(msg);
+        boolean b = m.find();
+        return b;
     }
 }

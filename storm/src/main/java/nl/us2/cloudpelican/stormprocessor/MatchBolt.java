@@ -201,9 +201,7 @@ public class MatchBolt extends BaseRichBolt {
 
         // Match filters
         for (Filter filter : getFilters().values()) {
-            Matcher m = filter.Matcher(msg);
-            boolean b = m.find();
-            if (b) {
+            if (filter.matches(msg)) {
                 // Emit match
                 _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg)); // Message
                 _collector.emit("match_stats", new Values(filter.Id(), MetricsEnum.MATCH.getMask(), 1L)); // Counters
