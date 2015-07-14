@@ -105,22 +105,26 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
 
 
     public void executeTuple(Tuple tuple) {
-        String filterId = tuple.getStringByField("filter_id");
-        int metric = tuple.getIntegerByField("metric");
-        long increment = tuple.getLongByField("increment");
+        try {
+            String filterId = tuple.getStringByField("filter_id");
+            int metric = tuple.getIntegerByField("metric");
+            long increment = tuple.getLongByField("increment");
 
 
-        Date d = new Date();
-        long ts = d.getTime() / 1000L; // UNIX TS
-        long bucket = ts - (ts % 60); // Minutely buckets
-        String k = SupervisorFilterStats.getKey(filterId, metric, increment);
+            Date d = new Date();
+            long ts = d.getTime() / 1000L; // UNIX TS
+            long bucket = ts - (ts % 60); // Minutely buckets
+            String k = SupervisorFilterStats.getKey(filterId, metric, increment);
 
 
-        // Append in-memory
-        if (!resultAggregator.containsKey(k)) {
-            resultAggregator.put(k, new SupervisorFilterStats(filterId, metric, bucket));
+            // Append in-memory
+            if (!resultAggregator.containsKey(k)) {
+                resultAggregator.put(k, new SupervisorFilterStats(filterId, metric, bucket));
+            }
+            resultAggregator.get(k).increment(increment);
+        } catch (Exception e) {
+            LOG.error("Unexpected error in executeTuple", e);
         }
-        resultAggregator.get(k).increment(increment);
 
         // No ack, is handled in outer
     }
