@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -615,7 +616,23 @@ func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	}
 
 	// Read body
-	scanner := bufio.NewScanner(r.Body)
+	var scanner *bufio.Scanner
+	if len(r.Header["Content-Encoding"]) > 0 && r.Header["Content-Encoding"][0] == "gzip" {
+		// GZIP
+		bReader := bufio.NewReader(r.Body)
+		gzipReader, err := gzip.NewReader(bReader)
+		if err != nil {
+			jresp.Error(fmt.Sprintf("Invalid GZIP: %s", err))
+			fmt.Fprint(w, jresp.ToString(false))
+			return
+		}
+		scanner = bufio.NewScanner(gzipReader)
+	} else {
+		// No GZIP
+		scanner = bufio.NewScanner(r.Body)
+	}
+
+	// Lines
 	scanner.Split(bufio.ScanLines)
 	var lines []string = make([]string, 0)
 	var count int = 0
