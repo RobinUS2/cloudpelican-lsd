@@ -18,7 +18,8 @@ public class Filter {
     private Pattern pattern;
     private Matcher matcher;
     private boolean useIndexOf = false;
-    private final String regexStr;
+    private boolean lowercase = false;
+    private String regexStr;
 
     private static final Logger LOG = LoggerFactory.getLogger(Filter.class);
 
@@ -30,10 +31,20 @@ public class Filter {
     }
 
     public void compileRegex() {
-        // Is this just a word or so to match?
-        if (Pattern.compile("^[A-z0-9_-]+$").matcher(regexStr).matches()) {
-            LOG.debug("Matching with indexOf() enabled for " + regexStr);
-            useIndexOf = true;
+        // Is this just a word or so to match? (supports also the case-insensitive flag)
+        if (Pattern.compile("^(\\(\\?i\\))?[A-Za-z0-9_\\-]+$").matcher(regexStr).matches()) {
+            // Case insensitive
+            if (regexStr.indexOf("(?i)") == 0) {
+                LOG.info("Detected lowercase, new regex " + regexStr);
+                regexStr = regexStr.replace("(?i)", "");
+                lowercase = true;
+            }
+
+            // Very simple word-style matching
+            if (Pattern.compile("^[A-Za-z0-9_\\-]+$").matcher(regexStr).matches()) {
+                LOG.info("Matching with indexOf() enabled for " + regexStr);
+                useIndexOf = true;
+            }
         }
 
         // Compile pattern
@@ -75,6 +86,12 @@ public class Filter {
     }
 
     public boolean matches(String msg) {
+        // Lowercase?
+        if (lowercase) {
+            msg = msg.toLowerCase();
+        }
+
+        // Index of matching?
         if (useIndexOf) {
             // Use faster matching (2-30x) first
             if (!msg.contains(regexStr)) {
