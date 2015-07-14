@@ -18,6 +18,7 @@ public class Filter {
     private Pattern pattern;
     private Matcher matcher;
     private boolean useIndexOf = false;
+    private final String regexStr;
 
     private static final Logger LOG = LoggerFactory.getLogger(Filter.class);
 
@@ -25,15 +26,14 @@ public class Filter {
         this.obj = obj;
         id = obj.get("id").getAsString();
         name = obj.get("name").getAsString();
+        regexStr = obj.get("regex").getAsString();
     }
 
     public void compileRegex() {
-        // Get regex string
-        String regexStr = obj.get("regex").getAsString();
-
         // Is this just a word or so to match?
         if (Pattern.compile("^[A-z0-9_-]+$").matcher(regexStr).matches()) {
-            System.out.println("Super simple " + regexStr);
+            LOG.debug("Matching with indexOf() enabled for " + regexStr);
+            useIndexOf = true;
         }
 
         // Compile pattern
@@ -75,6 +75,13 @@ public class Filter {
     }
 
     public boolean matches(String msg) {
+        if (useIndexOf) {
+            // Use faster matching (2-30x) first
+            if (!msg.contains(regexStr)) {
+                return false;
+            }
+        }
+        // Regex matching
         Matcher m = Matcher(msg);
         boolean b = m.find();
         return b;
