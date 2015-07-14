@@ -671,11 +671,32 @@ func PutStatsFilters(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 	jresp := jresp.NewJsonResp()
 
 	// Read body
-	bodyBytes, bodyErr := ioutil.ReadAll(r.Body)
+	var bodyErr error
+	var bodyBytes []byte
+	bodyBytes, bodyErr = ioutil.ReadAll(r.Body)
 	if bodyErr != nil {
 		jresp.Error("Invalid request body")
 		fmt.Fprint(w, jresp.ToString(false))
 		return
+	}
+
+	// Decode GZIP?
+	if len(r.Header["Content-Encoding"]) > 0 && r.Header["Content-Encoding"][0] == "gzip" {
+		// GZIP decode
+		r, gzErr := gzip.NewReader(ioutil.NopCloser(bytes.NewBuffer(bodyBytes)))
+		if gzErr != nil {
+			jresp.Error(fmt.Sprintf("error decompress: %s", gzErr))
+			fmt.Fprint(w, jresp.ToString(false))
+			return
+		}
+		defer r.Close()
+		bb, err2 := ioutil.ReadAll(r)
+		if err2 != nil {
+			jresp.Error(fmt.Sprintf("error read io: %s", err2))
+			fmt.Fprint(w, jresp.ToString(false))
+			return
+		}
+		bodyBytes = bb
 	}
 
 	// JSON decode

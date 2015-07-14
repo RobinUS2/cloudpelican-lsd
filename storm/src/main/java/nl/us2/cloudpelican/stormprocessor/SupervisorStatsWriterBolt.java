@@ -15,15 +15,19 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpPut;
+import org.apache.storm.http.entity.ByteArrayEntity;
 import org.apache.storm.http.entity.StringEntity;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 /**
  *
@@ -75,15 +79,30 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
             HttpClient client = HttpClientBuilder.create().build();
 
             String url = settings.get("supervisor_host") + "stats/filters";
-            LOG.debug(url);
+//            LOG.debug(url);
             HttpPut put = new HttpPut(url);
             Gson gson = new Gson();
             String json = gson.toJson(pushMap);
-            LOG.debug(json);
-            StringEntity entity = new StringEntity(json);
-            put.setEntity(entity);
+//            LOG.debug(json);
+//            StringEntity entity = new StringEntity(json);
+//            put.setEntity(entity);
+
+            // Gzip
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            GZIPOutputStream gzos = null;
+            try {
+                gzos = new GZIPOutputStream(baos);
+                gzos.write(json.getBytes("UTF-8"));
+            } finally {
+                if (gzos != null) try { gzos.close(); } catch (IOException ignore) {}
+            }
+            byte[] gzipBytes = baos.toByteArray();
+            put.setEntity(new ByteArrayEntity(gzipBytes));
+            put.setHeader("Content-Encoding", "gzip");
+
+            // Token
             String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-            LOG.debug(token);
+//            LOG.debug(token);
             put.setHeader("Authorization", "Basic " + token);
             HttpResponse resp = client.execute(put);
             int status = resp.getStatusLine().getStatusCode();
