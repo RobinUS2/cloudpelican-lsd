@@ -201,6 +201,7 @@ public class MatchBolt extends BaseRichBolt {
 
         // Match filters
         for (Filter filter : getFilters().values()) {
+            // @todo A lot of filters match case-insensitive, so executing 1 toLowerCase() for those who need it will improve efficiency as well
             if (filter.matches(msg)) {
                 // Emit match
                 _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg)); // Message
