@@ -282,7 +282,7 @@ func (f *Filter) AddResults(res []string) bool {
 		// for i := tooMany; i < currentCount-1; i++ {
 		// 	tmp = append(tmp, filterManager.filterResults[f.Id][i])
 		// }
-		filterManager.filterResults[f.Id] = filterManager.filterResults[f.Id][currentCount-maxMsgMemory-tooMany:]
+		filterManager.filterResults[f.Id] = filterManager.filterResults[f.Id][currentCount-tooMany:]
 	}
 
 	// Add lines
