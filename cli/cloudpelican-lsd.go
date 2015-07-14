@@ -161,7 +161,15 @@ func startConsole() {
 				if !multiLineInput || strings.Contains(input, ";") || CONSOLE_KEYWORDS[lowerStr] || CONSOLE_KEYWORDS_OPTS[splitLower[0]] == len(splitLower) {
 					// Flush buffer
 					lineBuffer.Reset()
+
+					// Execute the command
 					handleConsole(input)
+
+					// Reset the interrupted flag
+					interrupted = false
+					consecutiveInterruptCount = 0
+
+					// Print new wait
 					fmt.Printf("%s", getConsoleWait())
 				} else {
 					printConsoleInputPad()
