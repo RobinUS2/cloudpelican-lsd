@@ -9,14 +9,15 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import com.google.gson.Gson;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpPut;
 import org.apache.storm.http.entity.ByteArrayEntity;
-import org.apache.storm.http.entity.StringEntity;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,15 +34,15 @@ import java.util.zip.GZIPOutputStream;
  *
  * @author robin
  */
-public class SupervisorStatsWriterBolt extends BaseRichBolt {
+public class RollupStatsBolt extends BaseRichBolt {
 
     OutputCollector _collector;
     HashMap<String, SupervisorFilterStats> resultAggregator;
     private Settings settings;
 
-    private static final Logger LOG = LoggerFactory.getLogger(SupervisorStatsWriterBolt.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RollupStatsBolt.class);
 
-    public SupervisorStatsWriterBolt(Settings settings) {
+    public RollupStatsBolt(Settings settings) {
         super();
         this.settings = settings;
     }
@@ -65,59 +66,21 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
     }
 
     protected void _flush() {
-        HashMap<String, Long> pushMap = new HashMap<String, Long>();
-        for (Map.Entry<String, SupervisorFilterStats> kv : resultAggregator.entrySet()) {
-            String k = kv.getValue().toKey();
-            long c = kv.getValue().getCount();
-            LOG.debug(k + " = " + c);
-            pushMap.put(k, c);
-        }
-        if (pushMap.size()  < 1) {
+        if (resultAggregator.size()  < 1) {
             return;
         }
-        try {
-            HttpClient client = HttpClientBuilder.create().build();
 
-            String url = settings.get("supervisor_host") + "stats/filters";
-//            LOG.debug(url);
-            HttpPut put = new HttpPut(url);
-            Gson gson = new Gson();
-            String json = gson.toJson(pushMap);
-//            LOG.debug(json);
-//            StringEntity entity = new StringEntity(json);
-//            put.setEntity(entity);
-
-            // Gzip
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            GZIPOutputStream gzos = null;
-            try {
-                gzos = new GZIPOutputStream(baos);
-                gzos.write(json.getBytes("UTF-8"));
-            } finally {
-                if (gzos != null) try { gzos.close(); } catch (IOException ignore) {}
-            }
-            byte[] gzipBytes = baos.toByteArray();
-            put.setEntity(new ByteArrayEntity(gzipBytes));
-            put.setHeader("Content-Encoding", "gzip");
-
-            // Token
-            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-//            LOG.debug(token);
-            put.setHeader("Authorization", "Basic " + token);
-            HttpResponse resp = client.execute(put);
-            int status = resp.getStatusLine().getStatusCode();
-            if (status >= 400) {
-                throw new Exception("Invalid status " + status);
-            }
-        } catch (Exception e) {
-            LOG.error("Failed to write statistics to supervisor", e);
+        // Emit tuples
+        for (Map.Entry<String, SupervisorFilterStats> kv : resultAggregator.entrySet()) {
+            _collector.emit("rollup_stats", new Values(kv.getValue().getFilterId(), kv.getValue().getMetric(), kv.getValue().getBucket(), kv.getValue().getCount()));
         }
+
         resultAggregator.clear();
     }
 
     public Map<String, Object> getComponentConfiguration() {
         Config conf = new Config();
-        int tickFrequencyInSeconds = 10;
+        int tickFrequencyInSeconds = 1;
         conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequencyInSeconds);
         return conf;
     }
@@ -127,13 +90,13 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
         try {
             String filterId = tuple.getStringByField("filter_id");
             int metric = tuple.getIntegerByField("metric");
-            long timeBucket = tuple.getLongByField("time_bucket");
             long increment = tuple.getLongByField("increment");
 
-            long ts = timeBucket;
-            long bucket = ts - (ts % 60); // Minutely buckets
-            String k = SupervisorFilterStats.getKey(filterId, metric, increment);
 
+            Date d = new Date();
+            long ts = d.getTime() / 1000L; // UNIX TS
+            long bucket = ts - (ts % 1); // Secondly buckets
+            String k = SupervisorFilterStats.getKey(filterId, metric, increment);
 
             // Append in-memory
             if (!resultAggregator.containsKey(k)) {
@@ -148,5 +111,6 @@ public class SupervisorStatsWriterBolt extends BaseRichBolt {
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        declarer.declareStream("rollup_stats", new Fields("filter_id", "metric", "time_bucket", "increment"));
     }
 }

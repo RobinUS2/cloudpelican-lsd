@@ -23,6 +23,7 @@ public class Main {
     public static String KAFKA_SPOUT = "kafka_spout";
     public static String MATCH_BOLT = "match_bolt";
     public static String SUPERVISOR_RESULT_WRITER = "supervisor_result_writer";
+    public static String ROLLUP_STATS = "rollup_stats";
     public static String SUPERVISOR_STATS_WRITER = "supervisor_stats_writer";
     public static String ERROR_CLASSIFIER_BOLT = "error_classifier";
     public static String OUTLIER_DETECTION = "outlier_detection";
@@ -109,7 +110,8 @@ public class Main {
         builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor stats writer bolt
-        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), concurrency(1, 2)).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id")).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+        builder.setBolt(ROLLUP_STATS, new RollupStatsBolt(settings), concurrency(1, 2)).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id")).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), concurrency(1, 4)).fieldsGrouping(ROLLUP_STATS, "rollup_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
         builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
