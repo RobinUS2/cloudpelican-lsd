@@ -24,13 +24,14 @@ public class Main {
     public static String MATCH_BOLT = "match_bolt";
     public static String SUPERVISOR_RESULT_WRITER = "supervisor_result_writer";
     public static String SUPERVISOR_STATS_WRITER = "supervisor_stats_writer";
-    public static String SUPERVISOR_ERROR_STATS_WRITER = "supervisor_error_stats_writer";
     public static String ERROR_CLASSIFIER_BOLT = "error_classifier";
     public static String OUTLIER_DETECTION = "outlier_detection";
     public static String OUTLIER_COLLECTOR = "outlier_collector";
 
     private static boolean isRunning = true;
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
+
+    public static final int GLOBAL_CONCURRENCY = 6;
 
     public static void main(String [] args) throws Exception
     {
@@ -85,7 +86,6 @@ public class Main {
 
         // Topology
         TopologyBuilder builder = new TopologyBuilder();
-        int globalConcurrency = 6;
 
         // Time
         TimeZone.setDefault(TimeZone.getTimeZone("Etc/UTC"));
@@ -97,24 +97,23 @@ public class Main {
         spoutConfig.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
         KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
-        builder.setSpout(KAFKA_SPOUT, kafkaSpout, 3);
+        builder.setSpout(KAFKA_SPOUT, kafkaSpout, Integer.parseInt(settings.getOrDefault("kafka_partitions", "3")));
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), globalConcurrency * 4).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
 
         // Error classifier bolt
-        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor result writer bolt
-        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor stats writer bolt
-        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id"));
-        builder.setBolt(SUPERVISOR_ERROR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), globalConcurrency * 2).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), concurrency(1, 2)).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id")).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
-        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), globalConcurrency * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
-        builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), globalConcurrency * 1).shuffleGrouping(OUTLIER_DETECTION, "outliers");
+        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+        builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), concurrency(1, 10)).shuffleGrouping(OUTLIER_DETECTION, "outliers");
 
         // Sink
         if (settings.get("sinks") != null) {
@@ -140,7 +139,7 @@ public class Main {
                     if (!sinkBolt.isValid()) {
                         LOG.error("Sink '" + sinkName + "' not valid");
                     }
-                    builder.setBolt(sinkName, sinkBolt, globalConcurrency * 4).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, sinkBolt, GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }
             }
         }
@@ -151,9 +150,9 @@ public class Main {
         conf.setMessageTimeoutSecs(60); // Default is 30 seconds, which might be too short under peak load spikes, or when we run the outlier detection
         String topologyName = settings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
         if (argList.contains("-submit")) {
-            conf.setNumWorkers(globalConcurrency);
-            conf.setNumAckers(globalConcurrency);
-            conf.setMaxSpoutPending(1000);
+            conf.setNumWorkers(GLOBAL_CONCURRENCY);
+            conf.setNumAckers(concurrency(1, 10));
+            conf.setMaxSpoutPending(5000);
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
             LocalCluster cluster = new LocalCluster();
@@ -174,5 +173,9 @@ public class Main {
             cluster.killTopology(topologyName);
             cluster.shutdown();
         }
+    }
+
+    public static int concurrency(int min, int part) {
+        return Math.max(Math.round(GLOBAL_CONCURRENCY / part), min);
     }
 }
