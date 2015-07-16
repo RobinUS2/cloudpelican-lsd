@@ -36,11 +36,12 @@ public class AbstractSinkBolt extends BaseRichBolt {
 
     public void execute(Tuple tuple) {
         if (TupleHelpers.isTickTuple(tuple)) {
+            _collector.ack(tuple);
             executeTick();
         } else {
             executeTuple(tuple);
+            _collector.ack(tuple);
         }
-        _collector.ack(tuple);
     }
 
     protected String _sinkVarPrefix(String k) {
