@@ -98,7 +98,8 @@ public class Main {
         spoutConfig.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
         spoutConfig.scheme = new SchemeAsMultiScheme(new StringScheme());
         KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
-        builder.setSpout(KAFKA_SPOUT, kafkaSpout, Integer.parseInt(settings.getOrDefault("kafka_partitions", "3")));
+        int kafkaPartitions = Integer.parseInt(settings.getOrDefault("kafka_partitions", "3"));
+        builder.setSpout(KAFKA_SPOUT, kafkaSpout, kafkaPartitions);
 
         // Match bolt
         builder.setBolt(MATCH_BOLT, new MatchBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
@@ -156,8 +157,8 @@ public class Main {
         if (argList.contains("-submit")) {
             conf.setNumWorkers(GLOBAL_CONCURRENCY);
             conf.setNumAckers(GLOBAL_CONCURRENCY); // ackers = workers means every VM has an acker reducing overhead
-            conf.setMaxSpoutPending(GLOBAL_CONCURRENCY * 1000);
-            conf.setStatsSampleRate(1.0); // Disable in production
+            conf.setMaxSpoutPending(GLOBAL_CONCURRENCY * Integer.parseInt(settings.getOrDefault("topology_max_spout_multiplier", "1000")) * kafkaPartitions);
+            conf.setStatsSampleRate(Double.parseDouble(settings.getOrDefault("topology_stats_sample_rate", "0.05")));
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
             LocalCluster cluster = new LocalCluster();
