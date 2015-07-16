@@ -14,7 +14,7 @@ import java.util.List;
  * Created by robin on 16/07/15.
  */
 public class BigQueryInsertRunnable implements Runnable {
-    private static final Logger LOG = LoggerFactory.getLogger(BigQuerySinkBolt.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BigQueryInsertRunnable.class);
 
     private final BigQuerySinkBolt parent;
     private final String filterId;

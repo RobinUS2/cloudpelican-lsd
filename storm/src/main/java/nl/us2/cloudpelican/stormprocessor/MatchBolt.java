@@ -30,7 +30,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
 
 import static backtype.storm.utils.Utils.DEFAULT_STREAM_ID;
 

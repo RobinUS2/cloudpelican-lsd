@@ -12,23 +12,13 @@ import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
-import com.google.gson.Gson;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.storm.http.HttpResponse;
-import org.apache.storm.http.client.HttpClient;
-import org.apache.storm.http.client.methods.HttpPut;
-import org.apache.storm.http.entity.ByteArrayEntity;
-import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import storm.starter.util.TupleHelpers;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.zip.GZIPOutputStream;
 
 /**
  *

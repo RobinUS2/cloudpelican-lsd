@@ -15,7 +15,6 @@ import org.apache.storm.http.HttpResponse;
 import org.apache.storm.http.client.HttpClient;
 import org.apache.storm.http.client.methods.HttpPut;
 import org.apache.storm.http.entity.ByteArrayEntity;
-import org.apache.storm.http.entity.StringEntity;
 import org.apache.storm.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +25,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -36,8 +37,9 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
 
     OutputCollector _collector;
     HashMap<String, ArrayList<String>> resultAggregator;
-    private Settings settings;
+    public Settings settings;
     private static final int BATCH_SIZE = 5000;
+    private Executor executor;
 
     private static final Logger LOG = LoggerFactory.getLogger(SupervisorResultWriterBolt.class);
 
@@ -49,6 +51,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
         _collector = collector;
         resultAggregator = new HashMap<String, ArrayList<String>>();
+        executor = Executors.newFixedThreadPool(2);
     }
 
     public void execute(Tuple tuple) {
@@ -74,42 +77,17 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
 
     protected void _flushFilter(String filterId, ArrayList<String> data) {
         try {
-            HttpClient client = HttpClientBuilder.create().build();
-
-            String url = settings.get("supervisor_host") + "filter/" + filterId + "/result";
-            LOG.debug(url);
-            HttpPut put = new HttpPut(url);
+            // To string
             StringBuilder sb = new StringBuilder();
             for (String line : data) {
                 sb.append(line).append("\n");
             }
-            //StringEntity entity = new StringEntity(sb.toString());
-            //put.setEntity(entity);
 
-            // Gzip
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            GZIPOutputStream gzos = null;
-            try {
-                gzos = new GZIPOutputStream(baos);
-                gzos.write(sb.toString().getBytes("UTF-8"));
-            } finally {
-                if (gzos != null) try { gzos.close(); } catch (IOException ignore) {}
-            }
-            byte[] gzipBytes = baos.toByteArray();
-            put.setEntity(new ByteArrayEntity(gzipBytes));
-            put.setHeader("Content-Encoding", "gzip");
+            // Execute async
+            String url = settings.get("supervisor_host") + "filter/" + filterId + "/result";
+            executor.execute(new SupervisorResultWriterRunnable(this, url, sb.toString()));
 
-            // Token
-            String token = new String(Base64.encodeBase64((settings.get("supervisor_username") + ":" + settings.get("supervisor_password")).getBytes()));
-            LOG.debug(token);
-            put.setHeader("Authorization", "Basic " + token);
-
-            // Execute
-            HttpResponse resp = client.execute(put);
-            int status = resp.getStatusLine().getStatusCode();
-            if (status >= 400) {
-                throw new Exception("Invalid status " + status);
-            }
+            // Clear
             data.clear();
         } catch (Exception e) {
             LOG.error("Failed to write data to supervisor", e);
