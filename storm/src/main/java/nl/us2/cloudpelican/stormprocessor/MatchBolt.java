@@ -77,10 +77,14 @@ public class MatchBolt extends BaseRichBolt {
     }
 
     public void execute(Tuple tuple) {
-        if (TupleHelpers.isTickTuple(tuple)) {
-            executeTick();
-        } else {
-            executeTuple(tuple);
+        try {
+            if (TupleHelpers.isTickTuple(tuple)) {
+                executeTick();
+            } else {
+                executeTuple(tuple);
+            }
+        } catch (Exception e) {
+            LOG.error("Unexpected error in execute", e);
         }
         _collector.ack(tuple);
     }

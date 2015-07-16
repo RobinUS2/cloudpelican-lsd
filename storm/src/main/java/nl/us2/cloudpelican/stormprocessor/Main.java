@@ -149,12 +149,13 @@ public class Main {
         // Debug on for testing
         Config conf = new Config();
         conf.setDebug(false);
-        conf.setMessageTimeoutSecs(60); // Default is 30 seconds, which might be too short under peak load spikes, or when we run the outlier detection
+        conf.setMessageTimeoutSecs(120); // Default is 30 seconds, which might be too short under peak load spikes, or when we run the outlier detection
         String topologyName = settings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
         if (argList.contains("-submit")) {
             conf.setNumWorkers(GLOBAL_CONCURRENCY);
             conf.setNumAckers(concurrency(2, 10));
-            conf.setMaxSpoutPending(GLOBAL_CONCURRENCY * 4000);
+            conf.setMaxSpoutPending(GLOBAL_CONCURRENCY * 1000);
+            conf.setStatsSampleRate(1.0); // Disable in production
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
             LocalCluster cluster = new LocalCluster();
