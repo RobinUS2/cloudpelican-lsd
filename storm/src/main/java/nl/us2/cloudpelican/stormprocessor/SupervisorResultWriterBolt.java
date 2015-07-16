@@ -38,7 +38,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
     OutputCollector _collector;
     HashMap<String, ArrayList<String>> resultAggregator;
     public Settings settings;
-    private static final int BATCH_SIZE = 5000;
+    private static final int BATCH_SIZE = 2000;
     private Executor executor;
 
     private static final Logger LOG = LoggerFactory.getLogger(SupervisorResultWriterBolt.class);
