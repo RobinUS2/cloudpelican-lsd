@@ -23,6 +23,10 @@ type FilterManager struct {
 	filterStats         map[string]*FilterStats
 	filterOutliersTable string
 
+	// Result counters
+	filterResultCounter    map[string]uint64
+	filterResultCounterMux sync.RWMutex
+
 	// Caches
 	filtersCache    []*Filter
 	filtersCacheMux sync.RWMutex
@@ -48,10 +52,8 @@ type Filter struct {
 	Id         string       `json:"id"`
 	Stats      *FilterStats `json:"-"`
 	//Results    []string `json:"results"`
-	resultsMux       sync.RWMutex
-	statsMux         sync.RWMutex
-	resultCounter    uint64
-	resultCounterMux sync.RWMutex
+	resultsMux sync.RWMutex
+	statsMux   sync.RWMutex
 }
 
 func (f *Filter) Results() []*FilterResult {
@@ -246,10 +248,10 @@ func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
 // New result for this filter
 func (f *Filter) newFilterResult(raw string) *FilterResult {
 	// Get auto-increment key
-	f.resultCounterMux.Lock()
-	f.resultCounter++
-	id := f.resultCounter
-	f.resultCounterMux.Unlock()
+	filterManager.filterResultCounterMux.Lock()
+	filterManager.filterResultCounter[f.Id]++
+	id := filterManager.filterResultCounter[f.Id]
+	filterManager.filterResultCounterMux.Unlock()
 
 	// Init
 	elm := &FilterResult{
