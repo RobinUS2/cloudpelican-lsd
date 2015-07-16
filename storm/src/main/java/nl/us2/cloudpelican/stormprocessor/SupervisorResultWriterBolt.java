@@ -109,6 +109,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
             if (status >= 400) {
                 throw new Exception("Invalid status " + status);
             }
+            data.clear();
         } catch (Exception e) {
             LOG.error("Failed to write data to supervisor", e);
         }
