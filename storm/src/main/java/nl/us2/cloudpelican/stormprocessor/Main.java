@@ -155,7 +155,7 @@ public class Main {
         String topologyName = settings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
         if (argList.contains("-submit")) {
             conf.setNumWorkers(GLOBAL_CONCURRENCY);
-            conf.setNumAckers(concurrency(2, 10));
+            conf.setNumAckers(GLOBAL_CONCURRENCY); // ackers = workers means every VM has an acker reducing overhead
             conf.setMaxSpoutPending(GLOBAL_CONCURRENCY * 1000);
             conf.setStatsSampleRate(1.0); // Disable in production
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
