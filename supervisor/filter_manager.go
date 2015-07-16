@@ -250,9 +250,6 @@ func (f *Filter) newFilterResult(raw string) *FilterResult {
 	f.resultCounter++
 	id := f.resultCounter
 	f.resultCounterMux.Unlock()
-	if verbose {
-		log.Printf("id %d", id)
-	}
 
 	// Init
 	elm := &FilterResult{
