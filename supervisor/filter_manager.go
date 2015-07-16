@@ -570,6 +570,7 @@ func NewFilterManager() *FilterManager {
 		filterOutliersTable: "filter_outliers",
 		filterResults:       make(map[string][]*FilterResult),
 		filterStats:         make(map[string]*FilterStats),
+		filterResultCounter: make(map[string]uint64),
 	}
 	fm.Open()
 	fm.TimeseriesCleaner()
