@@ -16,14 +16,12 @@ import (
 )
 
 type FilterManager struct {
-	db                      *bolt.DB
-	filterTable             string
-	filterResults           map[string][]*FilterResult
-	filterResultCounters    map[string]uint64
-	filterResultCountersMux sync.RWMutex
-	filterStatsTable        string
-	filterStats             map[string]*FilterStats
-	filterOutliersTable     string
+	db                  *bolt.DB
+	filterTable         string
+	filterResults       map[string][]*FilterResult
+	filterStatsTable    string
+	filterStats         map[string]*FilterStats
+	filterOutliersTable string
 
 	// Caches
 	filtersCache    []*Filter
@@ -50,8 +48,10 @@ type Filter struct {
 	Id         string       `json:"id"`
 	Stats      *FilterStats `json:"-"`
 	//Results    []string `json:"results"`
-	resultsMux sync.RWMutex
-	statsMux   sync.RWMutex
+	resultsMux       sync.RWMutex
+	statsMux         sync.RWMutex
+	resultCounter    uint64
+	resultCounterMux sync.RWMutex
 }
 
 func (f *Filter) Results() []*FilterResult {
@@ -246,10 +246,10 @@ func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
 // New result for this filter
 func (f *Filter) newFilterResult(raw string) *FilterResult {
 	// Get auto-increment key
-	filterManager.filterResultCountersMux.Lock()
-	filterManager.filterResultCounters[f.Id]++
-	id := filterManager.filterResultCounters[f.Id]
-	filterManager.filterResultCountersMux.Unlock()
+	f.resultCounterMux.Lock()
+	f.resultCounter++
+	id := f.resultCounter
+	f.resultCounterMux.Unlock()
 
 	// Init
 	elm := &FilterResult{
@@ -554,12 +554,11 @@ func filterFromJson(b []byte) *Filter {
 // Init the filter manager
 func NewFilterManager() *FilterManager {
 	fm := &FilterManager{
-		filterTable:          "filters",
-		filterStatsTable:     "filter_stats",
-		filterOutliersTable:  "filter_outliers",
-		filterResults:        make(map[string][]*FilterResult),
-		filterResultCounters: make(map[string]uint64),
-		filterStats:          make(map[string]*FilterStats),
+		filterTable:         "filters",
+		filterStatsTable:    "filter_stats",
+		filterOutliersTable: "filter_outliers",
+		filterResults:       make(map[string][]*FilterResult),
+		filterStats:         make(map[string]*FilterStats),
 	}
 	fm.Open()
 	fm.TimeseriesCleaner()
