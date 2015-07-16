@@ -153,8 +153,8 @@ public class Main {
         String topologyName = settings.getOrDefault("topology_name", "cloudpelican_stormprocessor");
         if (argList.contains("-submit")) {
             conf.setNumWorkers(GLOBAL_CONCURRENCY);
-            conf.setNumAckers(concurrency(1, 10));
-            //conf.setMaxSpoutPending(5000);
+            conf.setNumAckers(concurrency(2, 10));
+            conf.setMaxSpoutPending(50000);
             StormSubmitter.submitTopologyWithProgressBar(topologyName, conf, builder.createTopology());
         } else {
             LocalCluster cluster = new LocalCluster();
