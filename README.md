@@ -2,7 +2,7 @@
 Log stream dump tool (uses Rsyslog, Apache Kafka and Apache Storm)
 
 ### Introduction ###
-CloudPelican LSD (log stream dump) is designed for analyzing realtime log streams. This enables you to interact with log streams in realtime, where as tools like `grep` would only run on a single machine. By forwarding the syslog of your servers to Kafka (using rsyslogd and omkafka as transport layer), you have all your logs in one stream. CloudPelican LSD sits directly on that stream and filters data based on your desires.
+CloudPelican LSD (log stream dump) is designed for analyzing realtime log streams (aka real time log viewer or real time log analyzer). This enables you to interact with log streams in realtime, where as tools like `grep` would only run on a single machine. By forwarding the syslog of your servers to Kafka (using rsyslogd and omkafka as transport layer), you have all your logs in one stream. CloudPelican LSD sits directly on that stream and filters data based on your desires.
 
 In addition to the real-time analysis it is possible to connect a persistent data store and query layer (currently support for Google BigQuery). This means that all results of your filters are persisted there and easily accessible.
 
