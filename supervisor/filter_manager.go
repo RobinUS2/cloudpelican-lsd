@@ -277,12 +277,12 @@ func (f *Filter) AddResults(res []string) bool {
 		if verbose {
 			log.Printf("Truncating memory for filter %s, exceeding limit of %d messages", f.Id, maxMsgMemory)
 		}
-		// tmp := make([]*FilterResult, 0)
+		tmp := make([]*FilterResult, 0)
 		tooMany := newPlusCurrent - maxMsgMemory
-		// for i := tooMany; i < currentCount-1; i++ {
-		// 	tmp = append(tmp, filterManager.filterResults[f.Id][i])
-		// }
-		filterManager.filterResults[f.Id] = filterManager.filterResults[f.Id][currentCount-tooMany:]
+		for i := tooMany; i < currentCount-1; i++ {
+			tmp = append(tmp, filterManager.filterResults[f.Id][i])
+		}
+		filterManager.filterResults[f.Id] = tmp
 	}
 
 	// Add lines
