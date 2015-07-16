@@ -114,8 +114,10 @@ public class Main {
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), concurrency(1, 4)).fieldsGrouping(ROLLUP_STATS, "rollup_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
-        builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
-        builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), concurrency(1, 10)).shuffleGrouping(OUTLIER_DETECTION, "outliers");
+        if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "false"))) {
+            builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
+            builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), concurrency(1, 10)).shuffleGrouping(OUTLIER_DETECTION, "outliers");
+        }
 
         // Sink
         if (settings.get("sinks") != null) {
@@ -164,7 +166,7 @@ public class Main {
             // Keep running until interrupt
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 @Override
-                public void run( ){
+                public void run() {
                     LOG.info("Shutting down");
                     isRunning = false;
                 }
