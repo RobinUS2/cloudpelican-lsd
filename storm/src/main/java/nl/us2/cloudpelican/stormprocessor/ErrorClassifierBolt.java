@@ -52,7 +52,6 @@ public class ErrorClassifierBolt extends BaseRichBolt {
     public void execute(Tuple tuple) {
         String filterId = tuple.getStringByField("filter_id");
         String msg = tuple.getStringByField("msg");
-        String msgLower = msg.toLowerCase();
 
         // Get classifier
         if (!classifiers.containsKey(filterId)) {
@@ -67,9 +66,10 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         List<String> msgTokens = Arrays.asList(msg.split("\\s+"));
 
         // Train classifier (all samples for the first 10K, afterwards 1 out of X
-        if (trainCount < 10000L || random.nextInt(10) == 1) {
+        if (trainCount < 10000L || random.nextInt(25) == 1) {
             // Word in blacklist?
             boolean errorWordMatch = false;
+            String msgLower = msg.toLowerCase();
             for (String errorWord : errorWords) {
                 if (msgLower.contains(errorWord)) {
                     errorWordMatch = true;
