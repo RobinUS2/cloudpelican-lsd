@@ -14,6 +14,8 @@ import storm.starter.util.TupleHelpers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Created by robin on 30/06/15.
@@ -25,6 +27,7 @@ public class AbstractSinkBolt extends BaseRichBolt {
     protected String sinkId;
     protected Settings settings;
     protected int batchSize;
+    protected Executor executor;
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractSinkBolt.class);
 
@@ -32,6 +35,13 @@ public class AbstractSinkBolt extends BaseRichBolt {
         this.sinkId = sinkId;
         this.settings = settings;
         this.batchSize = 500;
+    }
+
+    public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
+        _collector = collector;
+        resultAggregator = new HashMap<String, ArrayList<String>>();
+        prepareSink(conf, context, collector);
+        executor = Executors.newFixedThreadPool(2);
     }
 
     public void execute(Tuple tuple) {
@@ -94,12 +104,6 @@ public class AbstractSinkBolt extends BaseRichBolt {
         int tickFrequencyInSeconds = 10;
         conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, tickFrequencyInSeconds);
         return conf;
-    }
-
-    public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
-        _collector = collector;
-        resultAggregator = new HashMap<String, ArrayList<String>>();
-        prepareSink(conf, context, collector);
     }
 
     public void prepareSink(Map conf, TopologyContext context, OutputCollector collector) {
