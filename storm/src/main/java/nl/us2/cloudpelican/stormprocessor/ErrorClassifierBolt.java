@@ -16,10 +16,7 @@ import de.daslaboratorium.machinelearning.classifier.Classifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  *
@@ -32,6 +29,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
     private HashMap<String, Classifier<String, String>> classifiers;
     private HashMap<String, Long> samplesTrained;
     private String[] errorWords;
+    private Random random;
     public static final String CLASSIFY_ERROR = "error";
     public static final String CLASSIFY_REGULAR = "regular";
     public static final long MIN_TRAIN_COUNT = 100L;
@@ -48,6 +46,7 @@ public class ErrorClassifierBolt extends BaseRichBolt {
 
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
         _collector = collector;
+        random  = new Random();
     }
 
     public void execute(Tuple tuple) {
@@ -61,30 +60,37 @@ public class ErrorClassifierBolt extends BaseRichBolt {
             samplesTrained.put(filterId, 0L);
         }
 
-        // Word in blacklist?
-        List<String> msgTokens = Arrays.asList(msg.split("\\s+"));
-        boolean errorWordMatch = false;
-        for (String errorWord : errorWords) {
-            if (msgLower.contains(errorWord)) {
-                errorWordMatch = true;
-                break;
-            }
-        }
-
-        // Train classifier
-        if (errorWordMatch) {
-            // Likely error
-            LOG.debug("Train likely error: " + msg);
-            classifiers.get(filterId).learn(CLASSIFY_ERROR, msgTokens);
-        } else {
-            // Likely regular message
-            LOG.debug("Train likely regular: " + msg);
-            classifiers.get(filterId).learn(CLASSIFY_REGULAR, msgTokens);
-        }
-
-        // Increment samples trained
+        // Current train count
         long trainCount = samplesTrained.get(filterId);
-        samplesTrained.put(filterId, trainCount + 1L);
+
+        // Tokenize message
+        List<String> msgTokens = Arrays.asList(msg.split("\\s+"));
+
+        // Train classifier (all samples for the first 10K, afterwards 1 out of X
+        if (trainCount < 10000L || random.nextInt(10) == 1) {
+            // Word in blacklist?
+            boolean errorWordMatch = false;
+            for (String errorWord : errorWords) {
+                if (msgLower.contains(errorWord)) {
+                    errorWordMatch = true;
+                    break;
+                }
+            }
+
+            // Update classifiers
+            if (errorWordMatch) {
+                // Likely error
+                LOG.debug("Train likely error: " + msg);
+                classifiers.get(filterId).learn(CLASSIFY_ERROR, msgTokens);
+            } else {
+                // Likely regular message
+                LOG.debug("Train likely regular: " + msg);
+                classifiers.get(filterId).learn(CLASSIFY_REGULAR, msgTokens);
+            }
+
+            // Increment samples trained
+            samplesTrained.put(filterId, trainCount + 1L);
+        }
 
         // Match?
         if (trainCount >= MIN_TRAIN_COUNT && classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
