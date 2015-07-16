@@ -107,14 +107,14 @@ public class Main {
         builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
 
         // Supervisor result writer bolt
-        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+        builder.setBolt(SUPERVISOR_RESULT_WRITER, new SupervisorResultWriterBolt(settings), GLOBAL_CONCURRENCY * 1).shuffleGrouping(MATCH_BOLT); // For efficiency fields grouping would have been better but creates hotspots
 
         // Supervisor stats writer bolt
         builder.setBolt(ROLLUP_STATS, new RollupStatsBolt(settings), concurrency(1, 2)).fieldsGrouping(MATCH_BOLT, "match_stats", new Fields("filter_id")).fieldsGrouping(ERROR_CLASSIFIER_BOLT, "error_stats", new Fields("filter_id"));
         builder.setBolt(SUPERVISOR_STATS_WRITER, new SupervisorStatsWriterBolt(settings), concurrency(1, 4)).fieldsGrouping(ROLLUP_STATS, "rollup_stats", new Fields("filter_id"));
 
         // Outlier detection bolts (sharded by filter ID)
-        if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "false"))) {
+        if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "true"))) {
             builder.setBolt(OUTLIER_DETECTION, new OutlierDetectionBolt(settings), GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, "dispatch_outlier_checks", new Fields("filter_id"));
             builder.setBolt(OUTLIER_COLLECTOR, new OutlierCollectorBolt(settings), concurrency(1, 10)).shuffleGrouping(OUTLIER_DETECTION, "outliers");
         }
@@ -143,7 +143,7 @@ public class Main {
                     if (!sinkBolt.isValid()) {
                         LOG.error("Sink '" + sinkName + "' not valid");
                     }
-                    builder.setBolt(sinkName, sinkBolt, GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, sinkBolt, GLOBAL_CONCURRENCY * 2).shuffleGrouping(MATCH_BOLT); // For efficiency fields grouping would have been better but creates hotspots
                 }
             }
         }

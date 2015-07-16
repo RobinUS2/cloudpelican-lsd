@@ -100,7 +100,7 @@ public class MatchBolt extends BaseRichBolt {
     }
 
     protected void dispatchOutlierChecks() {
-        if (!Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "false"))) {
+        if (!Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "true"))) {
             return;
         }
 //        long start = new Date().getTime();
@@ -221,7 +221,7 @@ public class MatchBolt extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("filter_id", "msg"));
         declarer.declareStream("match_stats", new Fields("filter_id", "metric", "increment"));
-        if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "false"))) {
+        if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "true"))) {
             declarer.declareStream("dispatch_outlier_checks", new Fields("filter_id"));
         }
     }
