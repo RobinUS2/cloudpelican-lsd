@@ -141,7 +141,7 @@ public class Main {
                     if (!sinkBolt.isValid()) {
                         LOG.error("Sink '" + sinkName + "' not valid");
                     }
-                    builder.setBolt(sinkName, sinkBolt, GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
+                    builder.setBolt(sinkName, sinkBolt, GLOBAL_CONCURRENCY * 2).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));
                 }
             }
         }

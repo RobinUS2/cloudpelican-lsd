@@ -645,6 +645,10 @@ func PutFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		}
 	}
 
+	if verbose {
+		log.Printf("Received %d lines for %s", len(lines), filter.Id)
+	}
+
 	// Add results
 	res := filter.AddResults(lines)
 	jresp.Set("ack", res)
