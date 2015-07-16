@@ -437,6 +437,9 @@ func showFilters() {
 	}
 	fmt.Printf("FILTER NAME\n")
 	for _, filter := range filters {
+		if strings.HasPrefix(filter.Name, TMP_FILTER_PREFIX) {
+			continue
+		}
 		fmt.Printf("%s\n", filter.Name)
 	}
 }
@@ -505,6 +508,10 @@ func executeSelect(input string, opts map[string]string) {
 			tmpFilterName = fmt.Sprintf("%s%d", TMP_FILTER_PREFIX, time.Now().Unix())
 			supervisorCon.CreateFilter(tmpFilterName, where)
 			filter, _ = supervisorCon.FilterByName(tmpFilterName)
+			if filter == nil {
+				log.Printf("Filter not found")
+				return
+			}
 		}
 	}
 

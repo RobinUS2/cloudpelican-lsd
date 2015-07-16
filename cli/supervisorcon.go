@@ -273,9 +273,10 @@ func (s *SupervisorCon) Filters() ([]*Filter, error) {
 					go func(id string) {
 						s._delete(fmt.Sprintf("filter/%s", url.QueryEscape(id)))
 					}(filter.Id)
-				}
 
-				continue
+					// Do not show in list
+					continue
+				}
 			}
 
 			// Append
