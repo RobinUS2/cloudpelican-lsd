@@ -15,7 +15,7 @@ public class LogTypeSniffer {
     public LogTypeSniffer() {
         // 2001-07-04T12:08:56.235-07:00
         // SimpleDateFormat yyyy-MM-dd'T'HH:mm:ss.SSSXXX
-        iso86001tspattern = Pattern.compile("[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]+(\\+|\\-)[0-9]{2}:[0-9]{2}");
+        iso86001tspattern = Pattern.compile("[0-9]{4}\\-[0-9]{2}\\-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}([0-9]+)?(?:\\+|\\-)[0-9]{2}:[0-9]{2}");
         iso86001tsmatcher = iso86001tspattern.matcher("");
     }
 
@@ -32,7 +32,11 @@ public class LogTypeSniffer {
         // Match?
         if (iso86001tsmatcher.find()) {
             list.add(LogTypes.RSYSLOG);
-            res.setDateStr(iso86001tsmatcher.group());
+            if (iso86001tsmatcher.group(1) == null) {
+                res.setDateStr(iso86001tsmatcher.group());
+            } else {
+                res.setDateStr(iso86001tsmatcher.group(0).replace(iso86001tsmatcher.group(1), ""));
+            }
         }
 
         // Add list and return

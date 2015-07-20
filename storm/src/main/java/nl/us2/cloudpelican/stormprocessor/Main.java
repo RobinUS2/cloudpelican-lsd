@@ -103,10 +103,10 @@ public class Main {
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, kafkaPartitions);
 
         // Parse bolt
-        builder.setBolt(PARSE_BOLT, new ParseBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
+        builder.setBolt(PARSE_BOLT, new ParseBolt(settings), GLOBAL_CONCURRENCY * 1).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
 
         // Match bolt
-        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
+        builder.setBolt(MATCH_BOLT, new MatchBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(PARSE_BOLT, "messages"); // No local to prevent hotspots
 
         // Error classifier bolt
         builder.setBolt(ERROR_CLASSIFIER_BOLT, new ErrorClassifierBolt(settings), GLOBAL_CONCURRENCY * 1).fieldsGrouping(MATCH_BOLT, new Fields("filter_id"));

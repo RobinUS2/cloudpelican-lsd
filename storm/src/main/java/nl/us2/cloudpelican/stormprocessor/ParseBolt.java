@@ -6,6 +6,7 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Created by robin on 20/07/15.
@@ -23,6 +25,8 @@ public class ParseBolt  extends BaseRichBolt {
     private Settings settings;
     private LogTypeSniffer lts;
     private SimpleDateFormat iso8601sdf;
+
+    private static final int MAX_MSG_LENGTH = 4096;
 
     private static final Logger LOG = LoggerFactory.getLogger(ParseBolt.class);
 
@@ -44,6 +48,7 @@ public class ParseBolt  extends BaseRichBolt {
 
     public void executeTuple(Tuple tuple) {
         try {
+            // Validate message
             String msg = tuple.getString(0);
             if (msg == null) {
                 return;
@@ -51,6 +56,13 @@ public class ParseBolt  extends BaseRichBolt {
             msg = msg.trim();
             if (msg.isEmpty()) {
                 return;
+            }
+
+            // Msg length?
+            int len = msg.length();
+            if (len > MAX_MSG_LENGTH) {
+                LOG.warn("Truncating msg which has length of " + len);
+                msg = msg.substring(0, MAX_MSG_LENGTH) + "..";
             }
 
             // Sniff type
@@ -62,15 +74,17 @@ public class ParseBolt  extends BaseRichBolt {
                 try {
                     ts = iso8601sdf.parse(res.getDateStr());
                 } catch (ParseException pe) {
-                    LOG.error("Failed to parse date", pe);
+                    LOG.error("Failed to parse date: " + res.getDateStr()); // Do not log stack trace, too noisy
                 }
             }
+
+            // Fallback time stamp
             if (ts == null) {
                 ts = new Date(); // Fallback to now()
             }
-            LOG.info(res.getDateStr() + " " + ts.toString() + " " + ts.getTime());
 
-            // @todo Finish
+            // Emit
+            _collector.emit("messages", new Values(msg, ts.getTime()));
         } catch (Exception e) {
             LOG.error("Unexpected error in executeTuple", e);
         }
@@ -79,6 +93,6 @@ public class ParseBolt  extends BaseRichBolt {
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("rollup_stats", new Fields("filter_id", "metric", "time_bucket", "increment"));
+        declarer.declareStream("messages", new Fields("_raw", "ts"));
     }
 }
