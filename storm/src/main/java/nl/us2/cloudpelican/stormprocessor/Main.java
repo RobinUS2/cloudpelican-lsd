@@ -21,6 +21,7 @@ import java.util.TimeZone;
  */
 public class Main {
     public static String KAFKA_SPOUT = "kafka_spout";
+    public static String PARSE_BOLT = "parse_bolt";
     public static String MATCH_BOLT = "match_bolt";
     public static String SUPERVISOR_RESULT_WRITER = "supervisor_result_writer";
     public static String ROLLUP_STATS = "rollup_stats";
@@ -100,6 +101,9 @@ public class Main {
         KafkaSpout kafkaSpout = new KafkaSpout(spoutConfig);
         int kafkaPartitions = Integer.parseInt(settings.getOrDefault("kafka_partitions", "3"));
         builder.setSpout(KAFKA_SPOUT, kafkaSpout, kafkaPartitions);
+
+        // Parse bolt
+        builder.setBolt(PARSE_BOLT, new ParseBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
 
         // Match bolt
         builder.setBolt(MATCH_BOLT, new MatchBolt(settings), GLOBAL_CONCURRENCY * 6).shuffleGrouping(KAFKA_SPOUT); // No local to prevent hotspots
