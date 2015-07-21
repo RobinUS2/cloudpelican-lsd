@@ -1,5 +1,7 @@
 package nl.us2.cloudpelican.stormprocessor;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -35,7 +37,11 @@ public class LogTypeSniffer {
             if (iso86001tsmatcher.group(1) == null) {
                 res.setDateStr(iso86001tsmatcher.group());
             } else {
-                res.setDateStr(iso86001tsmatcher.group(0).replace(iso86001tsmatcher.group(1), ""));
+                // Remove last occurrence from millis
+                String revDate = StringUtils.reverse(iso86001tsmatcher.group(0));
+                String revMillis = StringUtils.reverse(iso86001tsmatcher.group(1));
+                String date = StringUtils.reverse(revDate.replaceFirst(revMillis, ""));
+                res.setDateStr(date);
             }
         }
 

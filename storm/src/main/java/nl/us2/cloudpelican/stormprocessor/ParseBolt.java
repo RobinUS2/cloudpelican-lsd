@@ -74,7 +74,7 @@ public class ParseBolt  extends BaseRichBolt {
                 try {
                     ts = iso8601sdf.parse(res.getDateStr());
                 } catch (ParseException pe) {
-                    LOG.error("Failed to parse date: " + res.getDateStr()); // Do not log stack trace, too noisy
+                    LOG.error("Failed to parse date '" + res.getDateStr() + "' original message: " + msg); // Do not log stack trace, too noisy
                 }
             }
 
