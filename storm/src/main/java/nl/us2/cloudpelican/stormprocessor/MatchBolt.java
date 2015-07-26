@@ -194,16 +194,16 @@ public class MatchBolt extends BaseRichBolt {
             // @todo A lot of filters match case-insensitive, so executing 1 toLowerCase() for those who need it will improve efficiency as well
             if (filter.matches(msg)) {
                 // Emit match
-                _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), msg)); // Message
-                _collector.emit("match_stats", new Values(filter.Id(), MetricsEnum.MATCH.getMask(), 1L)); // Counters
+                _collector.emit(DEFAULT_STREAM_ID, new Values(filter.Id(), tuple.getLongByField("ts"), msg)); // Message
+                _collector.emit("match_stats", new Values(filter.Id(), tuple.getLongByField("ts"), MetricsEnum.MATCH.getMask(), 1L)); // Counters
             }
         }
         // No ack, is handled in outer
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("filter_id", "msg"));
-        declarer.declareStream("match_stats", new Fields("filter_id", "metric", "increment"));
+        declarer.declare(new Fields("filter_id", "ts", "msg"));
+        declarer.declareStream("match_stats", new Fields("filter_id", "ts", "metric", "increment"));
         if (Boolean.parseBoolean(settings.getOrDefault("outlier_detection_enabled", "true"))) {
             declarer.declareStream("dispatch_outlier_checks", new Fields("filter_id"));
         }

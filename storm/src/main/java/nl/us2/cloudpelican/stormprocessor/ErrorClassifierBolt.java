@@ -95,12 +95,12 @@ public class ErrorClassifierBolt extends BaseRichBolt {
         // Match?
         if (trainCount >= MIN_TRAIN_COUNT && classifiers.get(filterId).classify(msgTokens).getCategory().equals(CLASSIFY_ERROR)) {
             LOG.debug("Classified as error: " + msg);
-            _collector.emit("error_stats", new Values(filterId, MetricsEnum.ERRROR.getMask(), 1L)); // Counters
+            _collector.emit("error_stats", new Values(filterId, tuple.getLongByField("ts"), MetricsEnum.ERRROR.getMask(), 1L)); // Counters
         }
         _collector.ack(tuple);
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("error_stats", new Fields("filter_id", "metric", "increment"));
+        declarer.declareStream("error_stats", new Fields("filter_id", "ts", "metric", "increment"));
     }
 }
