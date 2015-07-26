@@ -435,6 +435,16 @@ func (fm *FilterManager) GetFilters() []*Filter {
 }
 
 func (fm *FilterManager) GetFilter(id string) *Filter {
+	// Load from cache
+	fm.filtersCacheMux.RLock()
+	defer fm.filtersCacheMux.RUnlock()
+	for _, filter := range fm.filtersCache {
+		if filter.Id == id {
+			return filter
+		}
+	}
+
+	// Load from db
 	var wg sync.WaitGroup
 	var elm *Filter = nil
 	wg.Add(1)
