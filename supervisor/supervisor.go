@@ -90,6 +90,7 @@ func main() {
 	router.GET("/filter", GetFilter)                               // Get all filters
 	router.DELETE("/filter/:id", DeleteFilter)                     // Delete a filter
 	router.DELETE("/admin/truncate/outliers", DeleteAdminOutliers) // Delete outliers
+	router.DELETE("/admin/truncate/stats", DeleteAdminStats)       // Delete timeseries statistics
 	router.PUT("/admin/config", PutAdminConfig)                    // Set configuration value
 	router.POST("/bigquery/query", PostBigQueryExecute)            // Execute a query on bigquery, NOT JSON, response is TSV
 
@@ -360,6 +361,20 @@ func PutAdminConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	conf.Set(r.URL.Query().Get("key"), r.URL.Query().Get("value"))
 	res := conf.Save()
 	jresp.Set("saved", res)
+	jresp.OK()
+	fmt.Fprint(w, jresp.ToString(false))
+}
+
+func DeleteAdminStats(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if !basicAuth(w, r) {
+		return
+	}
+	if !adminAuth(w, r) {
+		return
+	}
+	jresp := jresp.NewJsonResp()
+	res := filterManager.TruncateStats()
+	jresp.Set("truncated", res)
 	jresp.OK()
 	fmt.Fprint(w, jresp.ToString(false))
 }

@@ -208,6 +208,48 @@ func (fm *FilterManager) TruncateOutliers() bool {
 	return true
 }
 
+// Remove all stats
+func (fm *FilterManager) TruncateStats() bool {
+	log.Println("Truncating stats")
+
+	keys := make([]string, 0)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	fm.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(fm.filterStatsTable))
+		c := b.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			keys = append(keys, fmt.Sprintf("%s", k))
+		}
+		wg.Done()
+		return nil
+	})
+	wg.Wait()
+
+	// Remove keys
+	var wgrm sync.WaitGroup
+	deleteCount := 0
+	for _, key := range keys {
+		wgrm.Add(1)
+		// Remove key
+		fm.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(fm.filterStatsTable))
+			err := b.Delete([]byte(key))
+			if err != nil {
+				log.Printf("Failed to remove stat: %s", err)
+			}
+			deleteCount++
+			wgrm.Done()
+			return nil
+		})
+		wgrm.Wait()
+	}
+	log.Printf("Removed %d stats", deleteCount)
+
+	return true
+}
+
 // Store outlier
 func (f *Filter) AddOutlier(ts int64, score float64, details string) bool {
 	// ID
