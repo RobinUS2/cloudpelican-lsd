@@ -19,6 +19,7 @@ type FilterManager struct {
 	db                  *bolt.DB
 	filterTable         string
 	filterResults       map[string][]*FilterResult
+	filterResultsMux    sync.RWMutex
 	filterStatsTable    string
 	filterStats         map[string]*FilterStats
 	filterOutliersTable string
@@ -52,19 +53,18 @@ type Filter struct {
 	Id         string       `json:"id"`
 	Stats      *FilterStats `json:"-"`
 	//Results    []string `json:"results"`
-	resultsMux sync.RWMutex
-	statsMux   sync.RWMutex
+	statsMux sync.RWMutex
 }
 
 func (f *Filter) Results() []*FilterResult {
-	f.resultsMux.RLock()
+	filterManager.filterResultsMux.RLock()
 	if filterManager.filterResults[f.Id] == nil {
-		f.resultsMux.RUnlock()
-		f.resultsMux.Lock()
+		filterManager.filterResultsMux.RUnlock()
+		filterManager.filterResultsMux.Lock()
 		filterManager.filterResults[f.Id] = make([]*FilterResult, 0)
-		f.resultsMux.Unlock()
+		filterManager.filterResultsMux.Unlock()
 	} else {
-		defer f.resultsMux.RUnlock()
+		defer filterManager.filterResultsMux.RUnlock()
 	}
 
 	return filterManager.filterResults[f.Id]
@@ -313,7 +313,7 @@ func (f *Filter) newFilterResult(raw string) *FilterResult {
 
 // @todo Support multiple adapters for storage of results, currently only in memory
 func (f *Filter) AddResults(res []string) bool {
-	f.resultsMux.Lock()
+	filterManager.filterResultsMux.Lock()
 
 	// Init variable
 	if filterManager.filterResults[f.Id] == nil {
@@ -351,7 +351,7 @@ func (f *Filter) AddResults(res []string) bool {
 		res := f.newFilterResult(line)
 		filterManager.filterResults[f.Id] = append(filterManager.filterResults[f.Id], res)
 	}
-	f.resultsMux.Unlock()
+	filterManager.filterResultsMux.Unlock()
 	return true
 }
 

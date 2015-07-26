@@ -485,9 +485,7 @@ func GetFilterResult(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	offset := uint64(offsetS)
 
 	// Get results
-	filter.resultsMux.RLock()
 	results := filter.Results()
-	filter.resultsMux.RUnlock()
 
 	// Build response lines
 	lines := make([]string, 0)
