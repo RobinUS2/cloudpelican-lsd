@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	terminal "github.com/carmark/pseudo-terminal-go/terminal"
@@ -34,6 +35,7 @@ var session map[string]string = make(map[string]string)
 var supervisorCon *SupervisorCon
 var conf *Conf
 var consecutiveInterruptCount int
+var interruptMux sync.RWMutex
 var interrupted bool
 var startupCommands string
 var silent bool
@@ -166,8 +168,10 @@ func startConsole() {
 					handleConsole(input)
 
 					// Reset the interrupted flag
+					interruptMux.Lock()
 					interrupted = false
 					consecutiveInterruptCount = 0
+					interruptMux.Unlock()
 
 					// Print new wait
 					fmt.Printf("%s", getConsoleWait())
@@ -181,11 +185,15 @@ func startConsole() {
 
 func handleInterrupt() {
 	// sig is a ^C, handle it
+	interruptMux.Lock()
 	interrupted = true
 	consecutiveInterruptCount++
 	if consecutiveInterruptCount >= 2 {
+		interruptMux.Unlock()
 		fmt.Printf("Exiting\n")
 		restoreTerminalAndExit(term, oldState)
+	} else {
+		interruptMux.Unlock()
 	}
 }
 
@@ -542,14 +550,18 @@ func executeSelect(input string, opts map[string]string) {
 	outer:
 		for {
 			// Handle interrup
+			interruptMux.Lock()
 			if interrupted {
 				interrupted = false
 				consecutiveInterruptCount = 0
+				interruptMux.Unlock()
 				fmt.Printf("Interrupted..\n")
 				if len(tmpFilterName) > 0 {
 					supervisorCon.RemoveFilter(tmpFilterName)
 				}
 				break
+			} else {
+				interruptMux.Unlock()
 			}
 			// Sleep
 			time.Sleep(200 * time.Millisecond) // @todo dynamic
