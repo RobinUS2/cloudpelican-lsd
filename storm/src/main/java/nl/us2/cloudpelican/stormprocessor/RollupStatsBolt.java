@@ -83,7 +83,7 @@ public class RollupStatsBolt extends BaseRichBolt {
             long increment = tuple.getLongByField("increment");
 
             long ts = tuple.getLongByField("ts");
-            long bucket = ts - (ts % 1); // Secondly buckets
+            long bucket = ts - (ts % 1000); // Secondly buckets (1000 ms)
             String k = SupervisorFilterStats.getKey(filterId, metric, increment);
 
             // Append in-memory

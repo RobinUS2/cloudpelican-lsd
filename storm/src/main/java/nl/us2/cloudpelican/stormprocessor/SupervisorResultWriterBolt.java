@@ -95,6 +95,7 @@ public class SupervisorResultWriterBolt extends BaseRichBolt {
     public void executeTuple(Tuple tuple) {
         String filterId = tuple.getStringByField("filter_id");
         String msg = tuple.getStringByField("msg");
+        long ts = tuple.getLongByField("ts");
 
         // Append in-memory
         if (!resultAggregator.containsKey(filterId)) {
