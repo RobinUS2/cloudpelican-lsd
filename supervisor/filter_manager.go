@@ -445,13 +445,15 @@ func (fm *FilterManager) GetFilter(id string) *Filter {
 	fm.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(fm.filterStatsTable))
 		res := b.Get([]byte(id))
-		var buf bytes.Buffer
-		buf.Write(res)
-		dec := gob.NewDecoder(&buf)
-		de := dec.Decode(&stats)
-		if de != nil {
-			stats = nil
-			log.Printf("Failed to load timeseries %s", de)
+		if res != nil {
+			var buf bytes.Buffer
+			buf.Write(res)
+			dec := gob.NewDecoder(&buf)
+			de := dec.Decode(&stats)
+			if de != nil {
+				stats = nil
+				log.Printf("Failed to load timeseries %s", de)
+			}
 		}
 		wg.Done()
 		return nil
