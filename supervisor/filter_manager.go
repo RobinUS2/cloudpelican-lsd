@@ -57,9 +57,16 @@ type Filter struct {
 }
 
 func (f *Filter) Results() []*FilterResult {
+	f.resultsMux.RLock()
 	if filterManager.filterResults[f.Id] == nil {
+		f.resultsMux.RUnlock()
+		f.resultsMux.Lock()
 		filterManager.filterResults[f.Id] = make([]*FilterResult, 0)
+		f.resultsMux.Unlock()
+	} else {
+		defer f.resultsMux.RUnlock()
 	}
+
 	return filterManager.filterResults[f.Id]
 }
 
